@@ -1,0 +1,14 @@
+# DEEPaaS framework requirements
+deepaas~=2.1.0
+webargs~=5.5.2
+flaat~=1.1.1
+
+# External requirements for the model and API
+fPDF2~=2.7.5
+# pytorch~=
+# tensorflow~=
+# keras~=
+# scikit-learn~=
+
+# Optional tools, you can use for quality of life
+# mlflow~=
