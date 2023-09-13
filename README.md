@@ -1,6 +1,6 @@
 # tufsegm_api
 
-[![Build Status](https://jenkins.indigo-datacloud.eu/buildStatus/icon?job=Pipeline-as-code/DEEP-OC-org/tufsegm_api/master)](https://jenkins.indigo-datacloud.eu/job/Pipeline-as-code/job/DEEP-OC-org/job/tufsegm_api/job/master)
+[![Build Status](https://jenkins.indigo-datacloud.eu/buildStatus/icon?job=Pipeline-as-code/DEEP-OC-org/tufsegm_api/test)](https://jenkins.indigo-datacloud.eu/job/Pipeline-as-code/job/DEEP-OC-org/job/tufsegm_api/job/test)
 
 Deepaas API for thermal urban feature semantic segmentation model repo
 
