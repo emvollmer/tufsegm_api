@@ -1,0 +1,3 @@
+[submodule "ThermUrbanFeatSegm"]
+	path = ThermUrbanFeatSegm
+	url = https://github.com/emvollmer/murnong_sem-segm.git
