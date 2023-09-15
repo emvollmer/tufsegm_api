@@ -8,10 +8,17 @@ To launch it, first install the package then run [deepaas](https://github.com/in
 
 > ![warning](https://img.shields.io/badge/Warning-red.svg) **Warning**: If you are using a virtual environment, make sure you are working with the last version of pip before installing the package. Use `pip install --upgrade pip` to upgrade pip.
 
+To facilitate deployment setup, the bash script `deployment_setup.sh` can be run to install the packages automatically:
 ```bash
-git clone https://github.com/emvollmer/tufsegm_api
-cd tufsegm_api
-pip install -e .
+wget https://raw.githubusercontent.com/emvollmer/tufsegm_api/master/deployment_setup.sh
+source deployment_setup.sh
+```
+
+To run the deployment at any time after having set up, simply source or execute `deployment_run.sh`.
+```bash
+source deployment_run.sh
+# Alternatively, do
+source venv/bin/activate
 deepaas-run --listen-ip 0.0.0.0
 ```
 
