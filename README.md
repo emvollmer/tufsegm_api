@@ -2,19 +2,15 @@
 
 [![Build Status](https://jenkins.indigo-datacloud.eu/buildStatus/icon?job=Pipeline-as-code/DEEP-OC-org/tufsegm_api/test)](https://jenkins.indigo-datacloud.eu/job/Pipeline-as-code/job/DEEP-OC-org/job/tufsegm_api/job/test)
 
-Deepaas API for thermal urban feature semantic segmentation model repo
+Deepaas API for thermal urban feature semantic segmentation model repo.
 
-To launch it, first install the package then run [deepaas](https://github.com/indigo-dc/DEEPaaS):
-
-> ![warning](https://img.shields.io/badge/Warning-red.svg) **Warning**: If you are using a virtual environment, make sure you are working with the last version of pip before installing the package. Use `pip install --upgrade pip` to upgrade pip.
-
-To facilitate deployment setup, the bash script `deployment_setup.sh` can be run to install the packages automatically:
+To facilitate setting up, the bash script `deployment_setup.sh` can be run to install everything automatically:
 ```bash
 wget https://raw.githubusercontent.com/emvollmer/tufsegm_api/master/deployment_setup.sh
 source deployment_setup.sh
 ```
 
-To run the deployment at any time after having set up, simply source or execute `deployment_run.sh`.
+After setup, simply launch and run [deepaas](https://github.com/indigo-dc/DEEPaaS) via the script `deployment_run.sh`.
 ```bash
 source deployment_run.sh
 # Alternatively, do
