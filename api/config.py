@@ -43,6 +43,11 @@ DATA_PATH = Path(DATA_PATH)
 MODELS_PATH = os.getenv("MODELS_PATH", default=BASE_PATH / "models")
 MODELS_PATH = Path(MODELS_PATH)
 
+MODEL_SUFFIX = ".hdf5"
+
+# Path to remote folder
+REMOTE_PATH = os.getenv("REMOTE_PATH", default="tufsegm")
+
 # logging level across API modules can be setup via API_LOG_LEVEL,
 # options: DEBUG, INFO(default), WARNING, ERROR, CRITICAL
 ENV_LOG_LEVEL = os.getenv("API_LOG_LEVEL", default="INFO")
