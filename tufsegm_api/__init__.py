@@ -13,6 +13,8 @@ from your_module import your_function as training
 import logging
 from pathlib import Path
 import tufsegm_api.config as cfg
+import api.config as api_cfg
+import api.utils as api_utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
@@ -47,6 +49,20 @@ def predict(**kwargs):
 def train(**kwargs):
     """Main/public method to perform training
     """
+    # if no data in local data folder, download it from Nextcloud
+    if not all(folder in list(api_cfg.DATA_PATH.iterdir()) for folder in ["images", "annotations"]):
+        logger.info(f"Data folder '{api_cfg.DATA_PATH}' empty, "
+                    f"downloading data from '{api_cfg.REMOTE_DATA_PATH}'...")
+        api_utils.copy_remote(frompath=api_cfg.REMOTE_DATA_PATH,
+                              topath=api_cfg.DATA_PATH)
+
+        logger.info("Extracting data from .zip format files...")
+        for zip_path in Path(api_cfg.DATA_PATH).glob("**/*.zip"):
+            limit_exceeded = unzip(zip_file=zip_path, 
+                                   limit_gb=12)
+            if limit_exceeded:
+                break
+
     # prepare the dataset, e.g.
     # dtst.mkdata()
     

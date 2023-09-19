@@ -29,10 +29,18 @@ else
     fi
 fi
 
+# ########## Installing general OS prerequisites
+if ! dpkg -l | grep -q unzip; then
+    echo "Unzip not installed. Installing now..." 
+    yes | apt-get install unzip
+else
+    echo "Unzip already installed. Requirement satisfied."
+fi
+
+# ########## Clone API repository
 api_name="tufsegm_api"
 submod_name="ThermUrbanFeatSegm"
 
-# ########## Clone API repository
 if [[ $(pwd) != *$api_name && ! -d $api_name ]]; then
     echo "Cloning API repository."
     git clone --recurse-submodules https://github.com/emvollmer/$api_name.git

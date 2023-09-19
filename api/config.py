@@ -45,8 +45,12 @@ MODELS_PATH = Path(MODELS_PATH)
 
 MODEL_SUFFIX = ".hdf5"
 
-# Path to remote folder
+# Remote (rshare) paths for data and models
 REMOTE_PATH = os.getenv("REMOTE_PATH", default="tufsegm")
+REMOTE_DATA_PATH = os.getenv("DATA_PATH", default=REMOTE_PATH / "data")
+REMOTE_DATA_PATH = Path(DATA_PATH)
+REMOTE_MODELS_PATH = os.getenv("MODELS_PATH", default=REMOTE_PATH / "models")
+REMOTE_MODELS_PATH = Path(MODELS_PATH)
 
 # logging level across API modules can be setup via API_LOG_LEVEL,
 # options: DEBUG, INFO(default), WARNING, ERROR, CRITICAL
