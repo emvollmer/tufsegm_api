@@ -35,8 +35,10 @@ def get_metadata():
             "description": config.MODEL_METADATA.get("summary"),
             "license": config.MODEL_METADATA.get("license"),
             "version": config.MODEL_METADATA.get("version"),
-            "datasets": utils.ls_dirs(config.DATA_PATH / "processed"),
-            "models": utils.ls_dirs(config.MODELS_PATH),
+            "datasets_local": utils.ls_dirs(Path(config.DATA_PATH, "processed")),
+            "datasets_remote": utils.ls_remote_dirs(suffix=".zip", exclude="additional_data"),
+            "models_local": utils.ls_dirs(config.MODELS_PATH),
+            "models_remote": utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude='perun_results'),
         }
         logger.debug("Package model metadata: %s", metadata)
         return metadata
@@ -101,7 +103,7 @@ def train(model_name, input_file, **options):
         Parsed history/summary of the training process.
     """
     try:  # Call your AI model train() method
-        logger.info("Using model %s for training", model_name)
+        # logger.info("Using model %s for training", model_name)
         logger.debug("Loading data from input_file: %s", input_file)
         logger.debug("Training with options: %s", options)
         result = aimodel.training(model_name, input_file, **options)

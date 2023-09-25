@@ -37,20 +37,16 @@ MODEL_METADATA["Authors"] = sorted(_AUTHORS)
 BASE_PATH = Path(__file__).resolve(strict=True).parents[1]
 
 # Path definition for data folder
-DATA_PATH = os.getenv("DATA_PATH", default=BASE_PATH / "data")
-DATA_PATH = Path(DATA_PATH)
+DATA_PATH = os.getenv("DATA_PATH", default=Path(BASE_PATH, "data"))
 # Path definition for the pre-trained models
-MODELS_PATH = os.getenv("MODELS_PATH", default=BASE_PATH / "models")
-MODELS_PATH = Path(MODELS_PATH)
+MODELS_PATH = os.getenv("MODELS_PATH", default=Path(BASE_PATH, "models"))
 
 MODEL_SUFFIX = ".hdf5"
 
 # Remote (rshare) paths for data and models
 REMOTE_PATH = os.getenv("REMOTE_PATH", default="tufsegm")
-REMOTE_DATA_PATH = os.getenv("DATA_PATH", default=REMOTE_PATH / "data")
-REMOTE_DATA_PATH = Path(DATA_PATH)
-REMOTE_MODELS_PATH = os.getenv("MODELS_PATH", default=REMOTE_PATH / "models")
-REMOTE_MODELS_PATH = Path(MODELS_PATH)
+REMOTE_DATA_PATH = os.getenv("REMOTE_DATA_PATH", default=Path(REMOTE_PATH, "data"))
+REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH", default=Path(REMOTE_PATH, "models"))
 
 # logging level across API modules can be setup via API_LOG_LEVEL,
 # options: DEBUG, INFO(default), WARNING, ERROR, CRITICAL

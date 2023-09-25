@@ -50,18 +50,22 @@ def train(**kwargs):
     """Main/public method to perform training
     """
     # if no data in local data folder, download it from Nextcloud
-    if not all(folder in list(api_cfg.DATA_PATH.iterdir()) for folder in ["images", "annotations"]):
-        logger.info(f"Data folder '{api_cfg.DATA_PATH}' empty, "
+    proc_data_path = Path(api_cfg.DATA_PATH, "processed")
+    if not all(folder in list(proc_data_path.iterdir()) for folder in ["images", "annotations"]):
+        logger.info(f"Data folder '{proc_data_path}' empty, "
                     f"downloading data from '{api_cfg.REMOTE_DATA_PATH}'...")
         api_utils.copy_remote(frompath=api_cfg.REMOTE_DATA_PATH,
-                              topath=api_cfg.DATA_PATH)
+                              topath=proc_data_path)
 
         logger.info("Extracting data from .zip format files...")
-        for zip_path in Path(api_cfg.DATA_PATH).glob("**/*.zip"):
+        for zip_path in Path(proc_data_path).glob("**/*.zip"):
             limit_exceeded = unzip(zip_file=zip_path, 
                                    limit_gb=12)
             if limit_exceeded:
                 break
+        
+            logger.info("Cleaning up zip file...")
+            zip_path.unlink()
 
     # prepare the dataset, e.g.
     # dtst.mkdata()
