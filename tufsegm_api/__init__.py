@@ -13,8 +13,8 @@ from your_module import your_function as training
 import logging
 from pathlib import Path
 import tufsegm_api.config as cfg
-import api.config as api_cfg
-import api.utils as api_utils
+import tufsegm_api.api.config as api_cfg
+import tufsegm_api.api.utils as api_utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)

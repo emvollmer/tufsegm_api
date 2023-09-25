@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Union
 
 import tufsegm_api.config as cfg
-import api.config as api_cfg
+import tufsegm_api.api.config as api_cfg
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
