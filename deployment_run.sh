@@ -17,6 +17,24 @@ if [[ $(pwd) != *$api_name && -d $api_name ]]; then
     cd $api_name
 fi
 
+# ########## Make sure CUDA exists and add as PATH variable
+local_cuda_path="/usr/local/cuda/"
+if ls $local_cuda_path &> /dev/null ; then
+    if [ -z "$CUDA_HOME" ] ; then
+        export CUDA_HOME=$local_cuda_path
+        echo "CUDA_HOME defined as $local_cuda_path"
+    else
+        echo "CUDA_HOME already defined as $CUDA_HOME"
+    fi
+else
+    echo "CUDA does not exist at $local_cuda_path! Please check and define path manually..."
+    if [ "$0" != "$BASH_SOURCE" ]; then
+        return 1
+    else
+        exit 1
+    fi
+fi
+
 # ########## Update submodule
 echo "Update submodule."
 git pull --recurse-submodules
@@ -51,4 +69,5 @@ else
     source $venv_act
 fi
 
-deepaas-run --listen-ip 0.0.0.0
+deep-start
+# ALTERNATIVELY: deepaas-run --listen-ip 0.0.0.0

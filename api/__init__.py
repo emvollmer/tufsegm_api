@@ -7,6 +7,7 @@ docs [1] and at a canonical exemplar module [2].
 [2]: https://github.com/deephdc/demo_app
 """
 import logging
+from pathlib import Path
 
 from aiohttp.web import HTTPException
 
@@ -35,7 +36,7 @@ def get_metadata():
             "description": config.MODEL_METADATA.get("summary"),
             "license": config.MODEL_METADATA.get("license"),
             "version": config.MODEL_METADATA.get("version"),
-            "datasets_local": utils.ls_dirs(Path(config.DATA_PATH, "processed")),
+            "datasets_local": utils.ls_dirs(Path(config.DATA_PATH, "raw")),
             "datasets_remote": utils.ls_remote_dirs(suffix=".zip", exclude="additional_data"),
             "models_local": utils.ls_dirs(config.MODELS_PATH),
             "models_remote": utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude='perun_results'),
@@ -88,13 +89,11 @@ def predict(model_name, input_file, accept='application/json', **options):
 
 
 @utils.train_arguments(schema=schemas.TrainArgsSchema)
-def train(model_name, input_file, **options):
+def train(**options):
     """Performs model training from given input data and parameters.
 
     Arguments:
-        model_name -- Model name from registry to use for training values.
-        input_file -- File with data and labels to use for training.
-        **options -- Arbitrary keyword arguments from TrainArgsSchema.
+        **options -- keyword arguments from TrainArgsSchema.
 
     Raises:
         HTTPException: Unexpected errors aim to return 50X
@@ -103,11 +102,31 @@ def train(model_name, input_file, **options):
         Parsed history/summary of the training process.
     """
     try:  # Call your AI model train() method
-        # logger.info("Using model %s for training", model_name)
-        logger.debug("Loading data from input_file: %s", input_file)
-        logger.debug("Training with options: %s", options)
-        result = aimodel.training(model_name, input_file, **options)
-        logger.debug("Training result: %s", result)
+        logger.info(f"Retraining a '{options['model_type']}' model")
+        logger.debug(f"Training with options: {options}")
+        result = aimodel.train(**options)
+        logger.debug(f"Training result: {result}")
         return result
     except Exception as err:
         raise HTTPException(reason=err) from err
+
+
+if __name__ == "__main__":
+    metadata = get_metadata()
+    print(metadata)
+
+    ex_args = {
+        'model_type': 'UNet',
+        'dataset_path': None,
+        'test_size': 0.2,
+        'channels': 4,
+        'processing': "basic",
+        'img_size': "640x512",
+        'epochs': 1,
+        'batch_size': 8,
+        'lr': 0.0001,
+        'seed': 42
+    }
+    train(
+        **ex_args
+    )

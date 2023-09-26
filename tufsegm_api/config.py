@@ -9,6 +9,14 @@ By convention, the CONSTANTS defined in this module are in UPPER_CASE.
 """
 import logging
 import os
+from pathlib import Path
+import sys
+
+import tufsegm_api.api.config as api_cfg
+
+# Define submodule name and path
+SUBMODULE_NAME = 'ThermUrbanFeatSegm'
+SUBMODULE_PATH = Path(api_cfg.BASE_PATH, SUBMODULE_NAME)
 
 # configure logging:
 # logging level across various modules can be setup via USER_LOG_LEVEL,
@@ -16,5 +24,13 @@ import os
 ENV_LOG_LEVEL = os.getenv("USER_LOG_LEVEL", "INFO")
 LOG_LEVEL = getattr(logging, ENV_LOG_LEVEL.upper())
 
-# EXAMPLE on how to load environment variables
-MY_PARAMETER_INT = int(os.getenv("MY_PARAMETER_INT", default="10"))
+if LOG_LEVEL == 'INFO':
+    VERBOSTIY = "-v"
+elif LOG_LEVEL == 'DEBUG':
+    VERBOSTIY = "-vv"
+else:
+    VERBOSTIY = "--quiet"
+
+# Data limits on node to uphold
+LIMIT_GB = int(os.getenv("LIMIT_GB", default="20"))
+DATA_LIMIT_GB = int(os.getenv("DATA_LIMIT_GB", default="15"))

@@ -6,7 +6,7 @@ to add new inputs to your API.
 The module shows simple but efficient example schemas. However, you may
 need to modify them for your needs.
 """
-from marshmallow import Schema
+import marshmallow
 from webargs import ValidationError, fields, validate
 
 from tufsegm_api.api import config, responses, utils
@@ -36,17 +36,15 @@ class Dataset(fields.String):
 
 # EXAMPLE of Prediction Args description
 # = HAVE TO MODIFY FOR YOUR NEEDS =
-class PredArgsSchema(Schema):
+class PredArgsSchema(marshmallow.Schema):
     """Prediction arguments schema for api.predict function."""
 
     class Meta:  # Keep order of the parameters as they are defined.
-        # pylint: disable=missing-class-docstring
-        # pylint: disable=too-few-public-methods
         ordered = True
 
     model_name = fields.String(
         metadata={
-            "enum": utils.ls_dirs(config.MODELS_PATH) + utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude="perun_results"),
+            'enum': utils.ls_dirs(config.MODELS_PATH) + utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude="perun_results"),
             'description': 'Model to be used for prediction. If only remote folders '
                            'are available, the selected one will be downloaded.'
         },
@@ -63,21 +61,21 @@ class PredArgsSchema(Schema):
     )
 
     display = fields.Bool(
-        required=False,
-        load_default=False,
         metadata={
             'enum': [True, False],
             'description': 'Plot the resulting prediction to the console.'
-        }
+        },
+        required=False,
+        load_default=False,
     )
 
     save = fields.Bool(
-        required=False,
-        load_default=True,
         metadata={
             'enum': [True, False],
             'description': 'Save the resulting prediction to a "predictions" subfolder in the model directory.'
-        }
+        },
+        required=False,
+        load_default=True,
     )
 
     accept = fields.String(
@@ -90,31 +88,37 @@ class PredArgsSchema(Schema):
     )
 
 
-# EXAMPLE of Training Args description
-# = HAVE TO MODIFY FOR YOUR NEEDS =
-class TrainArgsSchema(Schema):
+class TrainArgsSchema(marshmallow.Schema):
     """Training arguments schema for api.train function."""
 
     class Meta:  # Keep order of the parameters as they are defined.
-        # pylint: disable=missing-class-docstring
-        # pylint: disable=too-few-public-methods
         ordered = True
 
-#    model_name = ModelName(
-#        metadata={
-#            "description": "String/Path identification for models.",
-#        },
-#        required=True,
-#        load_default=None
-#    )
-
-    dataset = fields.String(
+    model_type = fields.String(
         metadata={
-            "description": "Path to the training dataset. If none is provided, "
+            "enum": ['UNet'],
+            "description": "Segmentation model type.",
+        },
+        required=False,
+        load_default="UNet"
+    )
+
+    dataset_path = fields.String(
+        metadata={
+            "description": "Path to the dataset. If none is provided, "
                            "the dataset in the 'data' folder will be used or else "
                            "downloaded from Nextcloud.",
         },
         required=False,
+    )
+
+    test_size = fields.Float(
+        metadata={
+            "description": "Percentage of the dataset to be used for testing "
+                           "and to calculate evaluation metrics with.",
+        },
+        required=False,
+        load_default=0.2,
     )
 
     channels = fields.Integer(
@@ -145,8 +149,6 @@ class TrainArgsSchema(Schema):
         required=False,
         load_default="640x512",
     )
-    # SIZE_W = img_size.split("x")[0]
-    # SIZE_H = img_size.split("x")[1]
 
     epochs = fields.Integer(
         metadata={
@@ -158,19 +160,19 @@ class TrainArgsSchema(Schema):
     )
 
     batch_size = fields.Integer(
+        metadata={'description': 'Batch size to load the data.'},
         required=False,
         load_default=8,
-        metadata={'description': 'Batch size to load the data.'}
     )
 
     lr = fields.Float(
+        metadata={'description': 'Learning rate.'},
         required=False,
         load_default=0.001,
-        metadata={'description': 'Learning rate.'}
     )
 
     seed = fields.Integer(
+        metadata={'description': 'Global seed number for training.'},
         required=False,
         load_default=1000,
-        metadata={'description': 'Global seed number for training.'}
     )

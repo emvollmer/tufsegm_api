@@ -1,9 +1,9 @@
 """Module to define CONSTANTS used across the DEEPaaS Interface.
 
-This module is used to define CONSTANTS used across the AI-model package.
+This module is used to define CONSTANTS used across the DEEPaaS API Interface.
 Do not misuse this module to define variables that are not CONSTANTS or
 that are not used across the `api` package. You can use the `config.py`
-file on your model package to define CONSTANTS related to your model.
+file in your model package to define CONSTANTS related to your model.
 
 By convention, the CONSTANTS defined in this module are in UPPER_CASE.
 """
@@ -11,6 +11,7 @@ import os
 import logging
 from importlib import metadata
 from pathlib import Path
+import sys
 
 
 # Default AI model
@@ -35,6 +36,10 @@ MODEL_METADATA["Authors"] = sorted(_AUTHORS)
 # a different folder. The current practice is to use the path from where the
 # model source is located.
 BASE_PATH = Path(__file__).resolve(strict=True).parents[1]
+if str(BASE_PATH) not in sys.path:
+    print(f"BASE_PATH '{BASE_PATH}' not in sys.path. "
+          f"Adding to allow for imports from submodule...")
+    sys.path.insert(0, str(BASE_PATH))
 
 # Path definition for data folder
 DATA_PATH = os.getenv("DATA_PATH", default=Path(BASE_PATH, "data"))
@@ -44,7 +49,7 @@ MODELS_PATH = os.getenv("MODELS_PATH", default=Path(BASE_PATH, "models"))
 MODEL_SUFFIX = ".hdf5"
 
 # Remote (rshare) paths for data and models
-REMOTE_PATH = os.getenv("REMOTE_PATH", default="tufsegm")
+REMOTE_PATH = os.getenv("REMOTE_PATH", default="rshare:tufsegm")
 REMOTE_DATA_PATH = os.getenv("REMOTE_DATA_PATH", default=Path(REMOTE_PATH, "data"))
 REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH", default=Path(REMOTE_PATH, "models"))
 

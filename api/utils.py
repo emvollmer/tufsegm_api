@@ -62,7 +62,7 @@ def ls_remote_dirs(suffix: str, exclude: Union[None, str] = None, timeout=600):
     Returns:
         A tuple with stdout and stderr from the command.
     """
-    frompath = f"rshare:{config.REMOTE_PATH}"
+    frompath = config.REMOTE_PATH
     with subprocess.Popen(
         args=["rclone", "lsf", f"{frompath}", "-R", "--absolute"],
         stdout=subprocess.PIPE,  # Capture stdout
@@ -96,7 +96,7 @@ def ls_remote_dirs(suffix: str, exclude: Union[None, str] = None, timeout=600):
 def copy_remote(frompath, topath, timeout=600):
     """Copies remote (e.g. NextCloud) folder in your local deployment or
     vice versa for example:
-        - `copy_remote('rshare:/data/images', '/srv/myapp/data/images')`
+        - `copy_remote('rshare:data/images', '/srv/myapp/data/images')`
 
     Arguments:
         frompath -- Source folder to be copied.
@@ -115,11 +115,11 @@ def copy_remote(frompath, topath, timeout=600):
         try:
             outs, errs = process.communicate(None, timeout)
         except TimeoutExpired:
-            logger.error("Timeout when copying from/to remote directory.")
+            print("Timeout when copying from/to remote directory.")
             process.kill()
             outs, errs = process.communicate()
         except Exception as exc:  # pylint: disable=broad-except
-            logger.error("Error copying from/to remote directory\n", exc)
+            print("Error copying from/to remote directory\n", exc)
             process.kill()
             outs, errs = process.communicate()
     return outs, errs

@@ -30,11 +30,11 @@ else
 fi
 
 # ########## Installing general OS prerequisites
-if ! dpkg -l | grep -q unzip; then
-    echo "Unzip not installed. Installing now..." 
-    yes | apt-get install unzip
+if ! dpkg -l | grep -q libgl1-mesa-glx; then
+    echo "libgl1 not installed. Installing now..."
+    yes | apt-get install libgl1-mesa-glx
 else
-    echo "Unzip already installed. Requirement satisfied."
+    echo "libgl1 already installed. Requirement satisfied."
 fi
 
 # ########## Clone API repository
@@ -89,7 +89,7 @@ if [[ "$VIRTUAL_ENV" != "" ]]; then
     echo "Currently in an activated virtual environment. Setup may proceed."
 else
     echo "Currently not in an activated virtual environment. Must have one up to proceed with package installation..."
-    venv_name="venv"
+    venv_name="venv2"
     venv_act="$venv_name"/bin/activate
     if test -f $venv_act; then
         echo "Virtual environment at '$venv_name' already exists. Activating..."
