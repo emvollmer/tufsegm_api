@@ -6,17 +6,17 @@ operate the methods defined at `__init__.py` or in your scripts.
 All functions here are optional and you can add or remove them as you need.
 """
 import logging
+import os
 from pathlib import Path
 import subprocess
+from subprocess import TimeoutExpired
+import time
 import threading
 from typing import Union
 import zipfile
 
 import tufsegm_api.config as cfg
 import tufsegm_api.api.config as api_cfg
-
-from ThermUrbanFeatSegm.scripts.setup.generate_segm_masks import main as generate_segm_masks_func
-from ThermUrbanFeatSegm.scripts.setup.train_test_split import main as train_test_split_func
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
@@ -36,7 +36,6 @@ def unzip(zip_file: Union[Path, str]):
 
     Raises:
         DiskSpaceExceeded: If available disk space was exceeded during unzipping.
-
     """
     # get limit by comparing to remaining available space on node
     limit_gb = check_node_disk_limit(cfg.DATA_LIMIT_GB)
@@ -57,7 +56,7 @@ def unzip(zip_file: Union[Path, str]):
         zip_ref.extractall(zip_file.parent)
 
 
-def setup(data_path: Path, test_size: int):
+def setup(data_path: Path, test_size: int, save_for_view: bool = False):
     """
     General setup function for annotation processing and dataset split.
     Generates segmentation masks from annotation data and splits the data into
@@ -68,7 +67,7 @@ def setup(data_path: Path, test_size: int):
         test_size: int. Size of the test set in splitting of train test.
     
     Raises:
-        DiskSpaceExceeded: If available disk space was exceeded during setup.
+        FileNotFoundError: If the necessary files don't exist after setup.
     """
     # get absolute limit by comparing to remaining available space on node
     limit_gb = check_node_disk_limit(cfg.DATA_LIMIT_GB)
@@ -79,33 +78,35 @@ def setup(data_path: Path, test_size: int):
                                           args=(limit_gb,), daemon=True)
         monitor_thread.start()
 
-        print("Generating segmentation masks from annotation data...")
-        generate_segm_masks_func(
-            img_dir=Path(data_path, "images"),
-            json_dir=Path(data_path, "annotations"),
-            save_for_view=False,
-            log_level=cfg.LOG_LEVEL
-        )
+        setup_cmd = ["/bin/bash",
+                     str(Path(cfg.SUBMODULE_PATH, 'scripts', 'setup', 'setup.sh')),
+                     "-j", str(Path(data_path, 'annotations')),
+                     "-i", str(Path(data_path, 'images')),
+                     "--test-size", str(test_size),
+                     cfg.VERBOSITY]
+        if save_for_view:
+            setup_cmd.insert(-1,"--save-for-view")
+
+        run_bash_subprocess(setup_cmd)
 
     except DiskSpaceExceeded as e:
         logger.error(f"Disk space limit exceeded: {str(e)}")
 
-    print("Splitting data into training and testing sets...")
-    train_test_split_func(
-        source_dir=None,
-        destination_dir=None,
-        test_size=test_size,
-        log_level=cfg.LOG_LEVEL
-    )
-    logger.info(f"Setup complete. Data path now contains {get_disk_usage() / (1024 ** 3)} GB.")
+    if not all(e in os.listdir(str(data_path)) for e in ["masks", "train.txt", "test.txt"]):
+        raise FileNotFoundError(f"Data path '{data_path}' does not contain required entries after setup!")
+
+    print(f"Setup complete. Data path now contains {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
 
 
 def monitor_disk_space(limit_gb: int = cfg.LIMIT_GB):
     """
     Thread function to monitor disk space and check the current usage doesn't exceed 
     the defined limit.
+
+    Raises:
+        DiskSpaceExceeded: If available disk space was exceeded during threading.
     """
-    limit_bytes = limit_gb * (1024 ** 3)     # convert to bytes
+    limit_bytes = limit_gb * (1024 ** 3)  # convert to bytes
     while True:
         time.sleep(10)
 
@@ -122,6 +123,9 @@ def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
 
     Args:
         limit_gb: user defined disk space limit (in GB)
+    
+    Returns:
+        available GB on node
     """
     try:
         # get available space on entire node
@@ -142,3 +146,31 @@ def get_disk_usage(folder: Path = api_cfg.DATA_PATH):
     """Get the current amount of bytes stored in the provided folder.
     """
     return sum(f.stat().st_size for f in folder.glob('**/*') if f.is_file())
+
+
+def run_bash_subprocess(cmd: list, timeout: int = 600):
+    """
+    Run bash script call via subprocess command
+    while printing all outputs to the terminal
+
+    Args:
+        cmd -- list of command line arguments for subprocess call
+        timeout -- int. Timeout in seconds for the subprocess command
+    """
+    print(f"Running subprocess command with arguments: '{cmd}'")
+    logger.debug(f"Running subprocess command with arguments: '{cmd}'")
+    with subprocess.Popen(
+        args=cmd,
+        stderr=subprocess.PIPE,
+        text=True
+    ) as process:
+        try:
+            outs, errs = process.communicate(None, timeout)  # required for multiple module run via bash
+            if process.returncode != 0:
+               print(f"Subprocess exited with a non-zero return code")
+        except TimeoutExpired:
+            print(f"Timeout during execution of bash script '{cmd}'.")
+            process.kill()
+        except Exception as exc:
+            print(f"Error during execution of bash script '{cmd}'", exc)
+            process.kill()

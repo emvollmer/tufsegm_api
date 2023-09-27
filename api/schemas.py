@@ -80,10 +80,12 @@ class PredArgsSchema(marshmallow.Schema):
 
     accept = fields.String(
         metadata={
+            "enum": list(responses.content_types),
             "description": "Return format for method response.",
             "location": "headers",
         },
-        required=True,
+        required=False,
+        load_default='application/json',
         validate=validate.OneOf(list(responses.content_types)),
     )
 
@@ -110,6 +112,17 @@ class TrainArgsSchema(marshmallow.Schema):
                            "downloaded from Nextcloud.",
         },
         required=False,
+    )
+
+    save_for_viewing = fields.Boolean(
+        metadata={
+            "enum": [True, False],
+            "description": "Save additional data such as segmentation masks "
+                           "in .png for user viewing. ATTENTION: This will "
+                           "fill up additional space!"
+        },
+        required=False,
+        load_default=False
     )
 
     test_size = fields.Float(

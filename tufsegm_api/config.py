@@ -24,12 +24,12 @@ SUBMODULE_PATH = Path(api_cfg.BASE_PATH, SUBMODULE_NAME)
 ENV_LOG_LEVEL = os.getenv("USER_LOG_LEVEL", "INFO")
 LOG_LEVEL = getattr(logging, ENV_LOG_LEVEL.upper())
 
-if LOG_LEVEL == 'INFO':
-    VERBOSTIY = "-v"
-elif LOG_LEVEL == 'DEBUG':
-    VERBOSTIY = "-vv"
+if LOG_LEVEL == 10:
+    VERBOSITY = "-vv"
+elif LOG_LEVEL == 20:
+    VERBOSITY = "-v"
 else:
-    VERBOSTIY = "--quiet"
+    VERBOSITY = "--quiet"
 
 # Data limits on node to uphold
 LIMIT_GB = int(os.getenv("LIMIT_GB", default="20"))

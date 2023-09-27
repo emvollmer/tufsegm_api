@@ -68,7 +68,7 @@ def predict(model_name, input_file, accept='application/json', **options):
         model_name -- Model name from registry to use for prediction values.
         input_file -- File with data to perform predictions from model.
         accept -- Response parser type, default is json.
-        **options -- Arbitrary keyword arguments from PredArgsSchema.
+        **options -- keyword arguments from PredArgsSchema.
 
     Raises:
         HTTPException: Unexpected errors aim to return 50X
@@ -77,7 +77,7 @@ def predict(model_name, input_file, accept='application/json', **options):
         The predicted model values (dict or str) or files.
     """
     try:  # Call your AI model predict() method
-        logger.info("Using model %s for predictions", model_name)
+        logger.info(f"Using model '{model_name}' for predictions")
         logger.debug("Loading data from input_file: %s", input_file.filename)
         logger.debug("Predict with options: %s", options)
         result = aimodel.predict(input_file.filename, model_name, **options)
@@ -118,6 +118,7 @@ if __name__ == "__main__":
     ex_args = {
         'model_type': 'UNet',
         'dataset_path': None,
+        'save_for_viewing': False,
         'test_size': 0.2,
         'channels': 4,
         'processing': "basic",

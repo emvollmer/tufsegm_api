@@ -1,12 +1,7 @@
 """Package to create dataset, build training and prediction pipelines.
 
-This file should define or import all the functions needed to operate the
-methods defined at tufsegm_api/api.py. Complete the TODOs
-with your own code or replace them importing your own functions.
-For example:
-```py
-from your_module import your_function as predict
-from your_module import your_function as training
+This file defines or imports all the functions needed to operate the
+methods defined at tufsegm_api/api.py.
 ```
 """
 import logging
@@ -17,7 +12,7 @@ import os
 import tufsegm_api.config as cfg
 import tufsegm_api.api.config as api_cfg
 
-from tufsegm_api.utils import unzip, setup
+from tufsegm_api.utils import unzip, setup, run_bash_subprocess
 from tufsegm_api.api.utils import copy_remote
 
 from ThermUrbanFeatSegm.scripts.segm_models.infer_UNet import main as predict_func
@@ -76,9 +71,13 @@ def train(**kwargs):
         print("Cleaning up zip file...")
         zip_path.unlink()
 
-    # # prepare data
-    # if not all(e in data_path_entries for e in ["masks", "train.txt", "test.txt"]):
-    #     setup(data_path=data_path, test_size=kwargs['test_size'])
+    # prepare data
+    if not all(e in data_path_entries for e in ["masks", "train.txt", "test.txt"]):
+        setup(
+            data_path=data_path, 
+            test_size=kwargs['test_size'],
+            save_for_view=kwargs['save_for_viewing']
+        )
 
     # # train model
     # logger.info("Starting training...")
@@ -91,47 +90,13 @@ def train(**kwargs):
     #                         }
     # cfg_options_str = ' '.join([f"{key}={value}" for key, value in kwargs['cfg_options'].items()])
     
-    # cmd = ["source", cfg.SUBMODULE_PATH + "/scripts/segm_models/train.sh", 
-    #        "-dst", api_cfg.MODELS_PATH,
-    #        "--channels", kwargs['channels'],
-    #        "--processing", kwargs['processing'],
-    #        "--cfg-options", cfg_options_str,
-    #        cfg.VERBOSTIY
-    #       ]
-
-    # with subprocess.Popen(
-    #     args=cmd,
-    #     stdout=subprocess.PIPE,
-    #     stderr=subprocess.PIPE,
-    #     text=True,
-    # ) as process:
-    #     try:
-    #         outs, errs = process.communicate(None, timeout)
-    #     except TimeoutExpired:
-    #         logger.error("Timeout when copying from/to remote directory.")
-    #         process.kill()
-    #         outs, errs = process.communicate()
-    #     except Exception as exc:  # pylint: disable=broad-except
-    #         logger.error("Error in training and evaluating model", exc)
-    #         process.kill()
-    #         outs, errs = process.communicate()
-
-    # ALTERNATIVELY WITHOUT PERUN
-    # train_func(
-    #     data_root=None,
-    #     split_root=None,
-    #     model_root=api_cfg.MODELS_PATH,
-    #     channels=kwargs.channels,
-    #     processing=kwargs.processing,
-    #     cfg_options=kwargs.cfg_options,
-    #     log_level=cfg.LOG_LEVEL
-    # )
-    # # evaluate model
-    # logger.info("Starting evaluation...")
-    # eval_func(
-    #     model_root=api_cfg.MODELS_PATH,
-    #     log_level=cfg.LOG_LEVEL
-    # )
+    # train_cmd = ["/bin/bash", str(Path(cfg.SUBMODULE_PATH, 'scripts', 'segm_models', 'train.sh')),
+    #              "-dst", str(api_cfg.MODELS_PATH),
+    #              "--channels", str(kwargs['channels']),
+    #              "--processing", str(kwargs['processing']),
+    #              "--cfg-options", cfg_options_str,
+    #              cfg.VERBOSITY]
+    # run_bash_subprocess(train_cmd)
 
     # return training results
     train_result = {'result': 'not implemented'}
@@ -144,6 +109,7 @@ if __name__ == '__main__':
     ex_args = {
         'model_type': 'UNet',
         'dataset_path': None,
+        'save_for_viewing': False,
         'test_size': 0.2,
         'channels': 4,
         'processing': "basic",
