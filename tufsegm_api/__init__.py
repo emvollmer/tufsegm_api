@@ -79,24 +79,25 @@ def train(**kwargs):
             save_for_view=kwargs['save_for_viewing']
         )
 
-    # # train model
-    # logger.info("Starting training...")
-    # kwargs['cfg_options'] = {'epochs': kwargs['epochs'],
-    #                          'batch_size': kwargs['batch'],
-    #                          'lr': kwargs['lr'],
-    #                          'seed': kwargs['seed'],
-    #                          'SIZE_W': kwargs['img_size'].split("x")[0],
-    #                          'SIZE_H': kwargs['img_size'].split("x")[1],
-    #                         }
-    # cfg_options_str = ' '.join([f"{key}={value}" for key, value in kwargs['cfg_options'].items()])
+    # train model
+    logger.info("Starting training...")
+    kwargs['cfg_options'] = {'epochs': kwargs['epochs'],
+                             'batch_size': kwargs['batch_size'],
+                             'lr': kwargs['lr'],
+                             'seed': kwargs['seed'],
+                             'SIZE_W': kwargs['img_size'].split("x")[0],
+                             'SIZE_H': kwargs['img_size'].split("x")[1],
+                            }
+    cfg_options_str = ' '.join([f"{key}={value}" for key, value in kwargs['cfg_options'].items()])
     
-    # train_cmd = ["/bin/bash", str(Path(cfg.SUBMODULE_PATH, 'scripts', 'segm_models', 'train.sh')),
-    #              "-dst", str(api_cfg.MODELS_PATH),
-    #              "--channels", str(kwargs['channels']),
-    #              "--processing", str(kwargs['processing']),
-    #              "--cfg-options", cfg_options_str,
-    #              cfg.VERBOSITY]
-    # run_bash_subprocess(train_cmd)
+    train_cmd = ["/bin/bash", str(Path(cfg.SUBMODULE_PATH, 'scripts', 'segm_models', 'train.sh')),
+                 "-dst", str(api_cfg.MODELS_PATH),
+                 "--channels", str(kwargs['channels']),
+                 "--processing", str(kwargs['processing']),
+                 "--cfg-options", cfg_options_str, # "--default-log"
+                 cfg.VERBOSITY]
+    print(f"\nRunning training with arguments:\n{train_cmd}")
+    run_bash_subprocess(train_cmd)
 
     # return training results
     train_result = {'result': 'not implemented'}
@@ -113,10 +114,10 @@ if __name__ == '__main__':
         'test_size': 0.2,
         'channels': 4,
         'processing': "basic",
-        'img_size': "640x512",
-        'epochs': 1,
-        'batch_size': 8,
-        'lr': 0.0001,
+        'img_size': "320x256", # "640x512"
+        'epochs': 2,
+        'batch_size': 4,    # 8
+        'lr': 0.001,
         'seed': 42
     }
     train(**ex_args)

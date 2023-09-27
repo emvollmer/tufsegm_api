@@ -113,7 +113,7 @@ def train(**options):
 
 if __name__ == "__main__":
     metadata = get_metadata()
-    print(metadata)
+    print(f"Metadata:\n{metadata}")
 
     ex_args = {
         'model_type': 'UNet',
@@ -122,10 +122,10 @@ if __name__ == "__main__":
         'test_size': 0.2,
         'channels': 4,
         'processing': "basic",
-        'img_size': "640x512",
+        'img_size': "320x256", # "640x512",
         'epochs': 1,
-        'batch_size': 8,
-        'lr': 0.0001,
+        'batch_size': 4, # 8,
+        'lr': 0.001,
         'seed': 42
     }
     train(

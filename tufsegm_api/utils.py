@@ -8,6 +8,7 @@ All functions here are optional and you can add or remove them as you need.
 import logging
 import os
 from pathlib import Path
+import signal
 import subprocess
 from subprocess import TimeoutExpired
 import time
@@ -159,18 +160,19 @@ def run_bash_subprocess(cmd: list, timeout: int = 600):
     """
     print(f"Running subprocess command with arguments: '{cmd}'")
     logger.debug(f"Running subprocess command with arguments: '{cmd}'")
-    with subprocess.Popen(
-        args=cmd,
-        stderr=subprocess.PIPE,
-        text=True
-    ) as process:
-        try:
-            outs, errs = process.communicate(None, timeout)  # required for multiple module run via bash
-            if process.returncode != 0:
-               print(f"Subprocess exited with a non-zero return code")
-        except TimeoutExpired:
-            print(f"Timeout during execution of bash script '{cmd}'.")
-            process.kill()
-        except Exception as exc:
-            print(f"Error during execution of bash script '{cmd}'", exc)
-            process.kill()
+
+    try:
+        process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
+        return_code = process.wait(timeout=timeout)
+
+        # check the return code to terminate in case the bash script was forcefully exited
+        if return_code == 0:
+            print("Bash script executed successfully.")
+        else:
+            print(f"Error during execution of bash script '{cmd[1]}'. "
+                  f"Terminated with return code {return_code}.")
+            process.terminate()
+
+    except subprocess.TimeoutExpired:
+        print(f"Timeout during execution of bash script '{cmd[1]}'.")
+        process.terminate()
