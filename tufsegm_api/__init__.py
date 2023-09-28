@@ -4,6 +4,8 @@ This file defines or imports all the functions needed to operate the
 methods defined at tufsegm_api/api.py.
 ```
 """
+from datetime import datetime, timedelta
+import json
 import logging
 from pathlib import Path
 import sys
@@ -96,13 +98,30 @@ def train(**kwargs):
                  "--processing", str(kwargs['processing']),
                  "--cfg-options", cfg_options_str, # "--default-log"
                  cfg.VERBOSITY]
-    print(f"\nRunning training with arguments:\n{train_cmd}")
+    current_time = datetime.now()
+    print(f"\nRunning training with arguments:\n{train_cmd}\n"
+          f"...at current time: {current_time.strftime('%Y-%m-%d_%H-%M-%S')}\n")
     run_bash_subprocess(train_cmd)
+    print(f"Training and evaluation completed.")
 
-    # return training results
-    train_result = {'result': 'not implemented'}
+    # return training results - check existance of evaluation file in model folder and load from there
+    try:
+        model_path = sorted(api_cfg.MODELS_PATH.glob("[!.]*"))[-1]
+        model_time = datetime.strptime(model_path.name, "%Y-%m-%d_%H-%M-%S")
+        if current_time - model_time <= timedelta(minutes=1):
+            eval_file = Path(model_path, "eval.json")
+            if eval_file.is_file():
+                with open(eval_file, "r") as f:
+                    train_result = json.load(f)
+            else:
+                train_result = {'result': 'error during training or evaluation, no model scores saved.'}
+        else:
+            train_result = {'result': f'error during training, no model folder similar to '
+                                      f'{current_time.strftime("%Y-%m-%d_%H-%M-%S")} exists.'}
+    except IndexError:
+        train_result = {'result': f'error during training, no model folders exist at {api_cfg.MODELS_PATH}'}
+
     logger.debug(f"[train()]: {train_result}")
-    
     return train_result
 
 
