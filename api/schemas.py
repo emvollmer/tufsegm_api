@@ -110,6 +110,7 @@ class TrainArgsSchema(marshmallow.Schema):
                            "downloaded from Nextcloud.",
         },
         required=False,
+        load_default=None
     )
 
     save_for_viewing = fields.Boolean(
