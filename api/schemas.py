@@ -44,10 +44,13 @@ class PredArgsSchema(marshmallow.Schema):
 
     model_name = fields.String(
         metadata={
-            'enum': utils.ls_dirs(config.MODELS_PATH) + utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude="perun_results"),
-            'description': 'Model to be used for prediction. If only remote folders '
-                           'are available, the selected one will be downloaded.'
+            "description": "Model to be used for prediction. If a remote folder (rshare:)"
+                           "is selected, it will automatically be downloaded from Nextcloud."
         },
+        validate=validate.OneOf(
+            utils.ls_dirs(config.MODELS_PATH) + 
+            utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude="perun_results")
+        ),
         required=True,
     )
 
@@ -56,37 +59,33 @@ class PredArgsSchema(marshmallow.Schema):
             "description": "Input image file with .npy extension consisting of four channels for predictions.",
             "type": "file",
             "location": "form",
+            "accept": ".npy",
         },
         required=True,
     )
 
-    display = fields.Bool(
+    display = fields.Boolean(
         metadata={
-            'enum': [True, False],
-            'description': 'Plot the resulting prediction to the console.'
+            "description": "Plot the resulting prediction to the console."
         },
-        required=False,
         load_default=False,
     )
 
-    save = fields.Bool(
+    save = fields.Boolean(
         metadata={
-            'enum': [True, False],
-            'description': 'Save the resulting prediction to a "predictions" subfolder in the model directory.'
+            "description": "Save the resulting prediction to a 'predictions' subfolder" 
+                           "in the model directory."
         },
-        required=False,
         load_default=True,
     )
 
     accept = fields.String(
         metadata={
-            "enum": list(responses.content_types),
             "description": "Return format for method response.",
             "location": "headers",
         },
-        required=False,
-        load_default='application/json',
         validate=validate.OneOf(list(responses.content_types)),
+        load_default='application/json',
     )
 
 
@@ -98,11 +97,10 @@ class TrainArgsSchema(marshmallow.Schema):
 
     model_type = fields.String(
         metadata={
-            "enum": ['UNet'],
             "description": "Segmentation model type.",
         },
-        required=False,
-        load_default="UNet"
+        validate=validate.OneOf(['UNet']),
+        load_default="UNet",
     )
 
     dataset_path = fields.String(
@@ -116,13 +114,11 @@ class TrainArgsSchema(marshmallow.Schema):
 
     save_for_viewing = fields.Boolean(
         metadata={
-            "enum": [True, False],
             "description": "Save additional data such as segmentation masks "
                            "in .png for user viewing. ATTENTION: This will "
                            "fill up additional space!"
         },
-        required=False,
-        load_default=False
+        load_default=False,
     )
 
     test_size = fields.Float(
@@ -130,62 +126,58 @@ class TrainArgsSchema(marshmallow.Schema):
             "description": "Percentage of the dataset to be used for testing "
                            "and to calculate evaluation metrics with.",
         },
-        required=False,
         load_default=0.2,
     )
 
     channels = fields.Integer(
         metadata={
-            "enum": [3, 4],
             "description": "Process the data either in standard 4 channels (RGBT) "
                            "or as 3 channels (greyRGB+T+T).",
         },
-        required=False,
+        validate=validate.OneOf([3, 4]),
         load_default=4,
     )
 
     processing = fields.String(
         metadata={
-            "enum": ["basic", "vignetting", "retinex_unsharp"],
             "description": "Use original data (basic) or apply preprocessing filters "
                            "(vignetting removal, retinex and unsharp).",
         },
-        required=False,
+        validate=validate.OneOf(["basic", "vignetting", "retinex_unsharp"]),
         load_default="basic",
     )
 
     img_size = fields.String(
         metadata={
-            "enum": ["640x512", "320x256"],
-            "description": "Use original image size (640x512) or downscale.",
+            "description": "Use original image size (640x512) or downscale. "
+                           "ATTENTION: The original size requires a lot of RAM memory "
+                           "(> 25000) otherwise training will fail."
         },
-        required=False,
-        load_default="640x512",
+        validate=validate.OneOf(["640x512", "320x256", "160x128"]),
+        load_default="320x256",
     )
 
     epochs = fields.Integer(
         metadata={
             "description": "Number of epochs to train the model.",
         },
-        required=False,
+        validate=validate.Range(min=1), # minimum value has to be 1
         load_default=1,
-        validate=validate.Range(min=1),
     )
 
     batch_size = fields.Integer(
         metadata={'description': 'Batch size to load the data.'},
-        required=False,
+        validate=validate.Range(min=1), # minimum value has to be 1
         load_default=8,
     )
 
     lr = fields.Float(
         metadata={'description': 'Learning rate.'},
-        required=False,
         load_default=0.001,
     )
 
     seed = fields.Integer(
         metadata={'description': 'Global seed number for training.'},
-        required=False,
+        validate=validate.Range(min=1), # minimum value has to be 1
         load_default=1000,
     )
