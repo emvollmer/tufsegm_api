@@ -7,7 +7,9 @@ The module shows simple but efficient example schemas. However, you may
 need to modify them for your needs.
 """
 import marshmallow
+from pathlib import Path
 from webargs import ValidationError, fields, validate
+import os
 
 from tufsegm_api.api import config, responses, utils
 
@@ -34,6 +36,18 @@ class Dataset(fields.String):
         return str(config.DATA_PATH / "processed" / value)
 
 
+class NpyFile(fields.String):
+    """Field that takes a file path as a string and makes sure it exists
+    and is a numpy.
+    """
+    def _deserialize(self, value, attr, data, **kwargs):
+        if not Path(value).is_file():
+            raise ValidationError(f"Provided file path `{value}` does not exist.")
+        if Path(value).suffix != ".npy":
+            raise ValidationError(f"Provided file path `{value}` is not a .npy file.")
+        return value
+
+
 # EXAMPLE of Prediction Args description
 # = HAVE TO MODIFY FOR YOUR NEEDS =
 class PredArgsSchema(marshmallow.Schema):
@@ -54,15 +68,30 @@ class PredArgsSchema(marshmallow.Schema):
         required=True,
     )
 
-    input_file = fields.Field(
+    input_file_local = fields.String(
         metadata={
-            "description": "Input image file with .npy extension consisting of four channels for predictions.",
-            "type": "file",
-            "location": "form",
-            "accept": ".npy",
+            "description": f"Select image file with .npy extension consisting of four channels for predictions."
+                           f"\nMUTUALLY EXCLUSIVE WITH input_file_external",
         },
+        validate=validate.OneOf(
+            utils.ls_files(Path(config.DATA_PATH, "raw", "images"), "**/*.npy"),
+        ),
         required=True,
+        #load_default=None  # TODO: Uncomment and remove "required" once input_file_external TODO is fixed
     )
+
+    # TODO: Field with "type" and "location" can't be optional but also can't be customized to search through data directory!
+    # input_file_external = fields.Field(
+    #     metadata={
+    #         "description": f"Input image file path with .npy extension consisting of four channels for predictions."
+    #                        f"\nMUTUALLY EXCLUSIVE WITH input_file_local",
+    #         "type": "file",
+    #         "location": "form",
+    #         "accept": ".npy",
+    #     },
+    #     # required=False,
+    #     load_default=None
+    # )
 
     display = fields.Boolean(
         metadata={
@@ -71,13 +100,14 @@ class PredArgsSchema(marshmallow.Schema):
         load_default=False,
     )
 
-    save = fields.Boolean(
-        metadata={
-            "description": "Save the resulting prediction to a 'predictions' subfolder" 
-                           "in the model directory."
-        },
-        load_default=True,
-    )
+    # Should always save results...
+    # save = fields.Boolean(
+    #     metadata={
+    #         "description": "Save the resulting prediction to a 'predictions' subfolder" 
+    #                        "in the model directory."
+    #     },
+    #     load_default=True,
+    # )
 
     accept = fields.String(
         metadata={
@@ -87,6 +117,19 @@ class PredArgsSchema(marshmallow.Schema):
         validate=validate.OneOf(list(responses.content_types)),
         load_default='application/json',
     )
+
+    # @marshmallow.validates_schema
+    # def validate_required_fields(self, data):
+    #     if 'input_file_external' != None and 'input_file_local' != None:
+    #         raise marshmallow.ValidationError(
+    #             'Only a single image can be selected for prediction - either from the '
+    #             'external directory or the local "data" repository folder.'
+    #         )
+    #     if 'input_file_external' == None and 'input_file_local' == None:
+    #         raise marshmallow.ValidationError(
+    #             'No image file for inference was selected! '
+    #             'Fill in either the "input_file_external" or "input_file_local" field.'
+    #         )
 
 
 class TrainArgsSchema(marshmallow.Schema):

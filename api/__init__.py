@@ -8,6 +8,7 @@ docs [1] and at a canonical exemplar module [2].
 """
 import logging
 from pathlib import Path
+import numpy as np
 
 from aiohttp.web import HTTPException
 
@@ -61,12 +62,10 @@ def warm():
 
 
 @utils.predict_arguments(schema=schemas.PredArgsSchema)
-def predict(model_name, input_file, accept='application/json', **options):
+def predict(accept='application/json', **options):
     """Performs model prediction from given input data and parameters.
 
     Arguments:
-        model_name -- Model name from registry to use for prediction values.
-        input_file -- File with data to perform predictions from model.
         accept -- Response parser type, default is json.
         **options -- keyword arguments from PredArgsSchema.
 
@@ -77,12 +76,23 @@ def predict(model_name, input_file, accept='application/json', **options):
         The predicted model values (dict or str) or files.
     """
     try:  # Call your AI model predict() method
-        logger.info(f"Using model '{model_name}' for predictions")
-        logger.debug("Loading data from input_file: %s", input_file.filename)
-        logger.debug("Predict with options: %s", options)
-        result = aimodel.predict(input_file.filename, model_name, **options)
-        logger.debug("Predict result: %s", result)
-        logger.info("Returning content_type for: %s", accept)
+        print(f"Using model '{options['model_name']}' for predictions")
+        try:
+            # Input file is local
+            options['input_file'] = str(Path(config.DATA_PATH, "raw", "images", options['input_file_local']))
+            print(f"Predicting on image: ", options['input_file'])
+        # TODO: Uncomment when input_file_external TODO is fixed
+        # except TypeError:
+        #     # Input file is external
+        #     options['input_file'] = options['input_file_external'].filename
+        #     print(f"Predicting on image: ", options['input_file_external'].original_filename)
+        except Exception:
+            raise HTTPException(reason=err) from err
+
+        print(f"Predicting with the user defined options: ", options)    # logger.debug
+        result = aimodel.predict(**options)
+        logger.debug(f"Predict result: ", result)
+        print(f"Returning content_type for: ", accept)    # logger.info
         return responses.content_types[accept](result, **options)
     except Exception as err:
         raise HTTPException(reason=err) from err
@@ -102,8 +112,8 @@ def train(**options):
         Parsed history/summary of the training process.
     """
     try:  # Call your AI model train() method
-        logger.info(f"Retraining a '{options['model_type']}' model")
-        logger.debug(f"Training with options: {options}")
+        print(f"Retraining a '{options['model_type']}' model")    # logger.info
+        logger.debug(f"Training with the user defined options: {options}")
         result = aimodel.train(**options)
         logger.debug(f"Training result: {result}")
         return result
@@ -115,19 +125,32 @@ if __name__ == "__main__":
     metadata = get_metadata()
     print(f"Metadata:\n{metadata}")
 
-    ex_args = {
-        'model_type': 'UNet',
-        'dataset_path': None,
-        'save_for_viewing': False,
-        'test_size': 0.2,
-        'channels': 4,
-        'processing': "basic",
-        'img_size': "320x256", # "640x512",
-        'epochs': 1,
-        'batch_size': 4, # 8,
-        'lr': 0.001,
-        'seed': 42
+    # train_args = {
+    #     'model_type': 'UNet',
+    #     'dataset_path': None,
+    #     'save_for_viewing': False,
+    #     'test_size': 0.2,
+    #     'channels': 4,
+    #     'processing': "basic",
+    #     'img_size': "320x256", # "640x512",
+    #     'epochs': 1,
+    #     'batch_size': 4, # 8,
+    #     'lr': 0.001,
+    #     'seed': 42
+    # }
+    # train(
+    #     **train_args
+    # )
+
+    pred_args = {
+        'model_name': 'rshare:tufsegm/models/2023-09-21_11-42-18',    # '2023-09-27_16-19-41'
+        'input_file_local': 'KA_01/DJI_0_0001_R.npy',   # None
+        #'input_file_remote': None,     # UploadedFile(name='input_file_external', filename='/tmp/tmport1qpph', content_type='application/octet-stream', original_filename='DJI_....npy'),
+        'display': False,
+        'save': True,
+        #'accept': 'application/json'
     }
-    train(
-        **ex_args
+    predict(
+        accept='application/json',
+        **pred_args
     )
