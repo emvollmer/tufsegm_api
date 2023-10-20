@@ -11,7 +11,7 @@ if rclone listremotes | grep -q "rshare:" ; then
         echo export RCLONE_CONFIG_RSHARE_PASS=$(rclone obscure $RCLONE_CONFIG_RSHARE_PASS) >> /root/.bashrc
         source /root/.bashrc
         if ! rclone about rshare: 2>&1 | grep -q "Used:" ; then
-            echo "Error in connecting to remote rshare."
+            echo "Error in connecting to remote rshare."; sleep 5
             if [ "$0" != "$BASH_SOURCE" ]; then
                 return 1
             else
@@ -21,7 +21,7 @@ if rclone listremotes | grep -q "rshare:" ; then
         echo "Connected to remote rshare."
     fi
 else
-    echo "Rshare not identified as (only) remote. Try to solve manually with AI4EOSC documentation."
+    echo "Rshare not identified as (only) remote. Try to solve manually with AI4EOSC documentation."; sleep 5
     if [ "$0" != "$BASH_SOURCE" ]; then
         return 1
     else
@@ -36,30 +36,6 @@ if ! dpkg -l | grep -q libgl1-mesa-glx; then
 else
     echo "libgl1 already installed. Requirement satisfied."
 fi
-
-# ########## Clone API repository
-api_name="tufsegm_api"
-submod_name="ThermUrbanFeatSegm"
-
-if [[ $(pwd) != *$api_name && ! -d $api_name ]]; then
-    echo "Cloning API repository."
-    git clone --recurse-submodules https://github.com/emvollmer/$api_name.git
-    echo "Change into API directory"
-    cd $api_name
-elif [[ $(pwd) != *$api_name && -d $api_name ]]; then
-    echo "Change into API directory."
-    cd $api_name
-fi
-
-# ########## Update submodule
-echo "Update submodule."
-git pull --recurse-submodules
-# add branch name of submodule to .gitmodules
-if ! grep -q "branch = master" ".gitmodules"; then
-    echo -e "\tbranch = master" >> ".gitmodules"
-    echo "Added 'branch = master' to .gitmodules."
-fi
-git submodule update --remote --recursive
 
 # ########## Check current python version
 required_ver="3.8"
@@ -82,14 +58,42 @@ if ! dpkg -l | grep -q python3.8-venv; then
     yes | add-apt-repository ppa:deadsnakes/ppa
     apt-get update
     yes | apt-get install python3.8-venv
+else
+    echo "Python3.8-venv already installed. Requirement satisfied."
 fi
+
+# ########## Clone API repository
+api_name="tufsegm_api"
+submod_name="ThermUrbanFeatSegm"
+
+if [[ $(pwd) != *$api_name && ! -d $api_name ]]; then
+    echo "-----------------------"
+    echo "Cloning API repository."
+    git clone --recurse-submodules https://github.com/emvollmer/$api_name.git   # with ssh key: git@github.com:emvollmer/tufsegm_api.git
+    echo "Change into API directory"
+    cd $api_name
+elif [[ $(pwd) != *$api_name && -d $api_name ]]; then
+    echo "Change into API directory."
+    cd $api_name
+fi
+
+# ########## Update submodule
+echo "Update submodule."
+git pull --recurse-submodules
+# add branch name of submodule to .gitmodules
+if ! grep -q "branch = master" ".gitmodules"; then
+    echo -e "\tbranch = master" >> ".gitmodules"
+    echo "Added 'branch = master' to .gitmodules."
+fi
+git submodule update --remote --recursive
+
 
 # ########## Check for activated venv, create one if there is none, otherwise activate it
 if [[ "$VIRTUAL_ENV" != "" ]]; then
     echo "Currently in an activated virtual environment. Setup may proceed."
 else
     echo "Currently not in an activated virtual environment. Must have one up to proceed with package installation..."
-    venv_name="venv2"
+    venv_name="venv"
     venv_act="$venv_name"/bin/activate
     if test -f $venv_act; then
         echo "Virtual environment at '$venv_name' already exists. Activating..."
@@ -97,7 +101,7 @@ else
         if python3.8 -m venv "$venv_name"; then
             echo "Virtual environment successfully created. Activating..."
         else
-            echo "Python3.8 venv creation unsuccessful. Stopping...";
+            echo "Python3.8 venv creation unsuccessful. Stopping..."; sleep 5
             if [ "$0" != "$BASH_SOURCE" ]; then
                 return 1
             else
