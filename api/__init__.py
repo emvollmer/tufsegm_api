@@ -45,20 +45,8 @@ def get_metadata():
         logger.debug("Package model metadata: %s", metadata)
         return metadata
     except Exception as err:
+        logger.error("Error collecting metadata: %s", err, exc_info=True)
         raise HTTPException(reason=err) from err
-
-
-def warm():
-    """Function to run preparation phase before anything else can start.
-
-    Raises:
-        RuntimeError: Unexpected errors aim to stop model loading.
-    """
-    try:  # Call your AI model warm() method
-        logger.info("Warming up the model.api...")
-        aimodel.warm()
-    except Exception as err:
-        raise RuntimeError(reason=err) from err
 
 
 @utils.predict_arguments(schema=schemas.PredArgsSchema)
@@ -95,6 +83,7 @@ def predict(accept='application/json', **options):
         print(f"Returning content_type for: ", accept)    # logger.info
         return responses.content_types[accept](result, **options)
     except Exception as err:
+        logger.error("Error while doing predictions: %s", err, exc_info=True)
         raise HTTPException(reason=err) from err
 
 
@@ -118,7 +107,8 @@ def train(**options):
         logger.debug(f"Training result: {result}")
         return result
     except Exception as err:
-        raise HTTPException(reason=err) from err
+        logger.error("Error while training: %s", err, exc_info=True)
+        raise  # Reraise the exception after log
 
 
 if __name__ == "__main__":

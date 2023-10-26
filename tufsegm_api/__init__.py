@@ -23,13 +23,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
 
 
-def warm(**kwargs):
-    """Main/public method to start up the model
-    """
-    # if necessary, start the model
-    pass
-
-
 def predict(**kwargs):
     """Main/public method to perform prediction
     """
