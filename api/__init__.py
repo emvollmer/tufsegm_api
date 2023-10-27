@@ -64,18 +64,18 @@ def predict(accept='application/json', **options):
         The predicted model values (dict or str) or files.
     """
     try:  # Call your AI model predict() method
-        print(f"Using model '{options['model_name']}' for predictions")
-        try:
-            # Input file is local
-            options['input_file'] = str(Path(config.DATA_PATH, "images", options['input_file_local']))
-            print(f"Predicting on image: ", options['input_file'])
+        logger.info(f"Using model '{options['model_name']}' for predictions")
+        # try:
+            # # Input file is local
+            # options['input_file'] = str(Path(config.DATA_PATH, "images", options['input_file_local']))
+            # print(f"Predicting on image: ", options['input_file'])
         # TODO: Uncomment when input_file_external TODO is fixed
         # except TypeError:
         #     # Input file is external
         #     options['input_file'] = options['input_file_external'].filename
         #     print(f"Predicting on image: ", options['input_file_external'].original_filename)
-        except Exception:
-            raise HTTPException(reason=err) from err
+        # except Exception:
+        #     raise HTTPException(reason=err) from err
 
         print(f"Predicting with the user defined options: ", options)    # logger.debug
         result = aimodel.predict(**options)
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         'input_file_local': 'KA_01/DJI_0_0001_R.npy',   # None
         #'input_file_remote': None,     # UploadedFile(name='input_file_external', filename='/tmp/tmport1qpph', content_type='application/octet-stream', original_filename='DJI_....npy'),
         'display': False,
-        'save': True,
+        #'save': True,
         #'accept': 'application/json'
     }
     predict(

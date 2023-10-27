@@ -38,18 +38,21 @@ class Dataset(fields.String):
 
 class NpyFile(fields.String):
     """Field that takes a file path as a string and makes sure it exists
-    and is a numpy.
+    either locally in repository directory or remotely on Nextcloud,
+    whilst also ensuring it's a numpy file.
     """
     def _deserialize(self, value, attr, data, **kwargs):
-        if not Path(value).is_file():
-            raise ValidationError(f"Provided file path `{value}` does not exist.")
-        if Path(value).suffix != ".npy":
-            raise ValidationError(f"Provided file path `{value}` is not a .npy file.")
-        return value
+        if value in utils.ls_files(Path(config.DATA_PATH), "**/*.npy"):
+            return value
+        elif value.startswith("rshare:"):
+            if value in utils.ls_remote_files(".npy"):
+                return value
+            else:
+                raise ValidationError(f"Provided file path `{value}` does not exist in NextCloud.")
+        else:
+            raise ValidationError(f"Provided file path `{value}` does not exist locally.")
 
 
-# EXAMPLE of Prediction Args description
-# = HAVE TO MODIFY FOR YOUR NEEDS =
 class PredArgsSchema(marshmallow.Schema):
     """Prediction arguments schema for api.predict function."""
 
@@ -68,18 +71,28 @@ class PredArgsSchema(marshmallow.Schema):
         required=True,
     )
 
-    input_file_local = fields.String(
+    input_file = NpyFile(
         metadata={
-            "description": f"Select image file with .npy extension consisting of four channels for predictions."
-                           f"\nMUTUALLY EXCLUSIVE WITH input_file_external",
+            "description": f"Insert a .npy path of a four channels file to infer on. Provide this in either one of two ways:"
+                           f"\n- local path (in 'data/')\tf.e.: 'images/KA_01/DJI_0_0001_R.npy'"
+                           f"\n- remote path on Nextcloud\tf.e.: 'rshare:tufsegm/.../KA_01/DJI_0_0001_R.npy'",
         },
-        validate=validate.OneOf(
-            utils.ls_files(Path(config.DATA_PATH, "images"), "**/*.npy"),
-        ),
         required=True,
-        #load_default=None  # TODO: Uncomment and remove "required" once input_file_external TODO is fixed
     )
 
+    # get local deployment file from list
+    # input_file_local = fields.String(
+    #     metadata={
+    #         "description": f"Select image file with .npy extension consisting of four channels for predictions."
+    #                        f"\nMUTUALLY EXCLUSIVE WITH input_file_external",
+    #     },
+    #     validate=validate.OneOf(
+    #         utils.ls_files(Path(config.DATA_PATH, "images"), "**/*.npy"),
+    #     ),
+    #     required=True,
+    #     #load_default=None  # TODO: Uncomment and remove "required" once input_file_external TODO is fixed
+    # )
+    # get external (local home) file from browsing
     # TODO: Field with "type" and "location" can't be optional but also can't be customized to search through data directory!
     # input_file_external = fields.Field(
     #     metadata={
@@ -99,15 +112,6 @@ class PredArgsSchema(marshmallow.Schema):
         },
         load_default=False,
     )
-
-    # Should always save results...
-    # save = fields.Boolean(
-    #     metadata={
-    #         "description": "Save the resulting prediction to a 'predictions' subfolder" 
-    #                        "in the model directory."
-    #     },
-    #     load_default=True,
-    # )
 
     accept = fields.String(
         metadata={

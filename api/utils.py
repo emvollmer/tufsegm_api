@@ -34,7 +34,10 @@ def ls_dirs(path: Path):
 
 
 def ls_files(path: Path, pattern: str):
-    """Utility to return a list of files available in `path` folder.
+    """Utility to return a list of files available in `path` folder
+    with a specific pattern.
+        - `ls_files(path=config.MODEL_PATH, pattern='*')`
+        - `ls_files(path=config.DATA_PATH, pattern='**/*.npy')`
 
     Arguments:
         path -- Directory path to scan.
@@ -45,7 +48,8 @@ def ls_files(path: Path, pattern: str):
     """
     logger.debug(f"Scanning for {pattern} files at: {path}")
     #return sorted([str(p) for p in path.glob(pattern)])
-    return sorted([str(Path(p.parent.name, p.name)) for p in path.glob(pattern)])
+    #return sorted([str(Path(p.parent.name, p.name)) for p in path.glob(pattern)])
+    return sorted([str(p.relative_to(path)) for p in path.glob(pattern)])
 
 
 def ls_remote_dirs(suffix: str, exclude: Union[None, str] = None, timeout=600):
@@ -62,6 +66,28 @@ def ls_remote_dirs(suffix: str, exclude: Union[None, str] = None, timeout=600):
     Returns:
         A tuple with stdout and stderr from the command.
     """
+    dirscan = ls_remote_files(suffix=suffix, timeout=timeout)
+    if dirscan:
+        if exclude is not None:
+            dirscan = [str(Path(f).parent).rstrip("/") for f in dirscan if not exclude in f]
+        else:
+            dirscan = [str(Path(f).parent).rstrip("/") for f in dirscan]
+    return list(set(dirscan))   # removes duplicates
+
+
+def ls_remote_files(suffix: str, timeout=600):
+    """Utility to return a list of remote (e.g. NextCloud) files
+    with a specific suffix.
+        - `ls_remote_files(suffix=config.MODEL_SUFFIX)`
+        - `ls_remote_files(suffix='.npy')`
+
+    Arguments:
+        suffix -- File suffix to filter found files.
+        timeout -- Timeout in seconds for the reading command.
+
+    Returns:
+        A list of files in config.REMOTE_PATH that match the 
+    """
     frompath = config.REMOTE_PATH
     with subprocess.Popen(
         args=["rclone", "lsf", f"{frompath}", "-R", "--absolute"],
@@ -73,56 +99,18 @@ def ls_remote_dirs(suffix: str, exclude: Union[None, str] = None, timeout=600):
             outs, errs = process.communicate(None, timeout)
 
             files = outs.splitlines()
-            if exclude is not None:
-                dirscan = [frompath + str(Path(f).parent).rstrip("/") for f in files 
-                           if f.endswith(suffix)
-                           if not exclude in f]
-            else:
-                dirscan = [frompath + str(Path(f).parent).rstrip("/") for f in files 
-                           if f.endswith(suffix)]
-            return list(set(dirscan))   # removes duplicates
+            filescan = [frompath + str(Path(f)) for f in files if f.endswith(suffix)]
+            return filescan
         except TimeoutExpired:
             logger.error(f"Timeout when reading remote directory '{frompath}'.")
             process.kill()
             outs, errs = process.communicate()
             return []
         except Exception as exc:  # pylint: disable=broad-except
-            logger.error(f"Error reading remote directory '{frompath}'\n{exc}")
+            logger.error(f"Error reading remote directory '{frompath}': %s", exc, exc_info=True)
             process.kill()
             outs, errs = process.communicate()
             return []
-
-
-# def copy_remote(frompath, topath, timeout=600):
-#     """Copies remote (e.g. NextCloud) folder in your local deployment or
-#     vice versa for example:
-#         - `copy_remote('rshare:data/images', '/srv/myapp/data/images')`
-
-#     Arguments:
-#         frompath -- Source folder to be copied.
-#         topath -- Destination folder.
-#         timeout -- Timeout in seconds for the copy command.
-
-#     Returns:
-#         A tuple with stdout and stderr from the command.
-#     """
-#     with subprocess.Popen(
-#         args=["rclone", "copy", f"{frompath}", f"{topath}"],
-#         stdout=subprocess.PIPE,  # Capture stdout
-#         stderr=subprocess.PIPE,  # Capture stderr
-#         text=True,  # Return strings rather than bytes
-#     ) as process:
-#         try:
-#             outs, errs = process.communicate(None, timeout)
-#         except TimeoutExpired:
-#             print("Timeout when copying from/to remote directory.")
-#             process.kill()
-#             outs, errs = process.communicate()
-#         except Exception as exc:  # pylint: disable=broad-except
-#             print("Error copying from/to remote directory\n", exc)
-#             process.kill()
-#             outs, errs = process.communicate()
-#     return outs, errs
 
 
 def generate_arguments(schema):

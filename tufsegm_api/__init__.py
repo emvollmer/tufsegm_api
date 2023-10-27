@@ -35,8 +35,8 @@ def predict(**kwargs):
             print(f"Model folder '{kwargs['model_name']}' contains 'rshare:' but exists locally. "
                   f"Using local folder instead...")
         else:
-            print(f"Model folder '{kwargs['model_name']}' contains 'rshare:', "
-                  f"downloading from '{api_cfg.REMOTE_DATA_PATH}'...")
+            print(f"Model folder '{kwargs['model_name']}' contains 'rshare:'. "
+                  f"Downloading from '{api_cfg.REMOTE_MODELS_PATH}'...")
             copy_remote(frompath=Path(kwargs['model_name']),
                         topath=Path(api_cfg.MODELS_PATH, remote_folder_name))
 
@@ -50,10 +50,33 @@ def predict(**kwargs):
 
     print(f"Predicting with the model at: {model_path}")
 
+    # If input_file is a remote ('rshare:'), download it to the data folder
+    if 'rshare:' in kwargs['input_file']:
+
+        # check if file of same name exists locally, don't copy if that's the case
+        remote_file_name = Path(kwargs['input_file']).relative_to(api_cfg.REMOTE_PATH)
+        if Path(api_cfg.DATA_PATH, remote_file_name).is_file():
+            print(f"Input file '{kwargs['input_file']}' contains 'rshare:' but exists locally. "
+                  f"Using local file instead...")
+        else:
+            print(f"Input file '{kwargs['input_file']}' contains 'rshare:'. "
+                  f"Downloading from '{api_cfg.REMOTE_PATH}'...")
+            copy_remote(frompath=Path(kwargs['input_file']),
+                        topath=Path(api_cfg.DATA_PATH, remote_file_name).parent)
+
+        # redefine the input_file as only the file itself
+        kwargs['input_file'] = remote_file_name
+
+    # define the input file path
+    input_file_path = Path(api_cfg.DATA_PATH, kwargs['input_file'])
+    
+    print(f"Predicting on image: {input_file_path}")
+    logger.info(f"Predicting on image: {input_file_path}")  # this does nothing!
+
     # prediction
     predict_func(
         model_dir=model_path,
-        img_path=kwargs['input_file'],
+        img_path=input_file_path,
         mask_path=None,
         display=kwargs['display'],
         save=True,
