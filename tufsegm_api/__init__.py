@@ -12,10 +12,8 @@ import sys
 import os
 
 import tufsegm_api.config as cfg
-import tufsegm_api.api.config as api_cfg
 
 from tufsegm_api.utils import copy_remote, unzip, setup, run_bash_subprocess
-#from tufsegm_api.api.utils import copy_remote
 
 from ThermUrbanFeatSegm.scripts.segm_models.infer_UNet import main as predict_func
 
@@ -31,20 +29,20 @@ def predict(**kwargs):
 
         # check if folder of same name exists locally, don't copy if that's the case
         remote_folder_name = Path(kwargs['model_name']).name
-        if remote_folder_name in os.listdir(api_cfg.MODELS_PATH):
+        if remote_folder_name in os.listdir(cfg.MODELS_PATH):
             print(f"Model folder '{kwargs['model_name']}' contains 'rshare:' but exists locally. "
                   f"Using local folder instead...")
         else:
             print(f"Model folder '{kwargs['model_name']}' contains 'rshare:'. "
-                  f"Downloading from '{api_cfg.REMOTE_MODELS_PATH}'...")
+                  f"Downloading from '{cfg.REMOTE_MODELS_PATH}'...")
             copy_remote(frompath=Path(kwargs['model_name']),
-                        topath=Path(api_cfg.MODELS_PATH, remote_folder_name))
+                        topath=Path(cfg.MODELS_PATH, remote_folder_name))
 
         # redefine the model name as only the folder itself
         kwargs['model_name'] = remote_folder_name
 
     # define the model path
-    model_path = Path(api_cfg.MODELS_PATH, kwargs['model_name'])
+    model_path = Path(cfg.MODELS_PATH, kwargs['model_name'])
     if not Path(model_path).is_dir():
         raise FileNotFoundError(f"Model folder '{model_path}' does not exist!")
 
@@ -54,21 +52,21 @@ def predict(**kwargs):
     if 'rshare:' in kwargs['input_file']:
 
         # check if file of same name exists locally, don't copy if that's the case
-        remote_file_name = Path(kwargs['input_file']).relative_to(api_cfg.REMOTE_PATH)
-        if Path(api_cfg.DATA_PATH, remote_file_name).is_file():
+        remote_file_name = Path(kwargs['input_file']).relative_to(cfg.REMOTE_PATH)
+        if Path(cfg.DATA_PATH, remote_file_name).is_file():
             print(f"Input file '{kwargs['input_file']}' contains 'rshare:' but exists locally. "
                   f"Using local file instead...")
         else:
             print(f"Input file '{kwargs['input_file']}' contains 'rshare:'. "
-                  f"Downloading from '{api_cfg.REMOTE_PATH}'...")
+                  f"Downloading from '{cfg.REMOTE_PATH}'...")
             copy_remote(frompath=Path(kwargs['input_file']),
-                        topath=Path(api_cfg.DATA_PATH, remote_file_name).parent)
+                        topath=Path(cfg.DATA_PATH, remote_file_name).parent)
 
         # redefine the input_file as only the file itself
         kwargs['input_file'] = remote_file_name
 
     # define the input file path
-    input_file_path = Path(api_cfg.DATA_PATH, kwargs['input_file'])
+    input_file_path = Path(cfg.DATA_PATH, kwargs['input_file'])
     
     print(f"Predicting on image: {input_file_path}")
     logger.info(f"Predicting on image: {input_file_path}")  # this does nothing!
@@ -102,7 +100,7 @@ def predict(**kwargs):
 def train(**kwargs):
     """Main/public method to perform training
     """
-    data_path = Path(kwargs['dataset_path'] or Path(api_cfg.DATA_PATH))
+    data_path = Path(kwargs['dataset_path'] or Path(cfg.DATA_PATH))
     print(f"Training with the user defined parameters:\n{locals()}")
 
     # get file and folder names in data_path (non-recursive)
@@ -111,8 +109,8 @@ def train(**kwargs):
     # if no data in local data folder, download it from Nextcloud
     if not all(e in data_path_entries for e in ["images", "annotations"]):
         print(f"Data folder '{data_path}' is empty, "
-              f"downloading data from '{api_cfg.REMOTE_DATA_PATH}'...")
-        copy_remote(frompath=api_cfg.REMOTE_DATA_PATH,
+              f"downloading data from '{cfg.REMOTE_DATA_PATH}'...")
+        copy_remote(frompath=cfg.REMOTE_DATA_PATH,
                     topath=data_path)
 
     # if zipped data in local data folder, unzip it
@@ -144,7 +142,7 @@ def train(**kwargs):
     cfg_options_str = ' '.join([f"{key}={value}" for key, value in kwargs['cfg_options'].items()])
     
     train_cmd = ["/bin/bash", str(Path(cfg.SUBMODULE_PATH, 'scripts', 'segm_models', 'train.sh')),
-                 "-dst", str(api_cfg.MODELS_PATH),
+                 "-dst", str(cfg.MODELS_PATH),
                  "--channels", str(kwargs['channels']),
                  "--processing", str(kwargs['processing']),
                  "--cfg-options", cfg_options_str, # "--default-log"
@@ -157,7 +155,7 @@ def train(**kwargs):
 
     # return training results - check existance of evaluation file in model folder and load from there
     try:
-        model_path = sorted(api_cfg.MODELS_PATH.glob("[!.]*"))[-1]
+        model_path = sorted(cfg.MODELS_PATH.glob("[!.]*"))[-1]
         model_time = datetime.strptime(model_path.name, "%Y-%m-%d_%H-%M-%S")
         if current_time - model_time <= timedelta(minutes=1):
             eval_file = Path(model_path, "eval.json")
@@ -170,7 +168,7 @@ def train(**kwargs):
             train_result = {'result': f'error during training, no model folder similar to '
                                       f'{current_time.strftime("%Y-%m-%d_%H-%M-%S")} exists.'}
     except IndexError:
-        train_result = {'result': f'error during training, no model folders exist at {api_cfg.MODELS_PATH}'}
+        train_result = {'result': f'error during training, no model folders exist at {cfg.MODELS_PATH}'}
 
     logger.debug(f"[train()]: {train_result}")
     return train_result

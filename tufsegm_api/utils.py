@@ -17,7 +17,6 @@ from typing import Union
 import zipfile
 
 import tufsegm_api.config as cfg
-import tufsegm_api.api.config as api_cfg
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
@@ -92,7 +91,7 @@ def unzip(zip_file: Union[Path, str]):
     limit_bytes = limit_gb * (1024 ** 3)    # convert to bytes
 
     # get the current amount of bytes stored in the data directory
-    stored_bytes = get_disk_usage(api_cfg.DATA_PATH)
+    stored_bytes = get_disk_usage(cfg.DATA_PATH)
 
     print(f"Data folder currently contains {round(stored_bytes / (1024 ** 3), 2)} GB.\n"
           f"Now unpacking '{zip_file}'...")
@@ -101,7 +100,7 @@ def unzip(zip_file: Union[Path, str]):
         for file_info in zip_ref.infolist():
             if stored_bytes + file_info.file_size >= limit_bytes:
                 raise DiskSpaceExceeded(f"Unzipping will exceed the maximum allowed disk space "
-                                        f"of {limit_gb} GB for '{api_cfg.DATA_PATH}' folder.")
+                                        f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder.")
         # unzip the file to its current directory
         zip_ref.extractall(zip_file.parent)
     
@@ -167,7 +166,7 @@ def monitor_disk_space(limit_gb: int = cfg.LIMIT_GB):
 
         if stored_bytes >= limit_bytes:
             raise DiskSpaceExceeded(f"Exceeded maximum allowed disk space of {limit_gb} GB "
-                                    f"for '{api_cfg.BASE_PATH}' folder.")
+                                    f"for '{cfg.BASE_PATH}' folder.")
 
 
 def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
@@ -195,7 +194,7 @@ def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
         return available_gb
 
 
-def get_disk_usage(folder: Path = api_cfg.BASE_PATH):
+def get_disk_usage(folder: Path = cfg.BASE_PATH):
     """Get the current amount of bytes stored in the provided folder.
     """
     return sum(f.stat().st_size for f in folder.rglob('*') if f.is_file())

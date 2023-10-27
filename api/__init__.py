@@ -30,14 +30,14 @@ def get_metadata():
         A dictionary containing metadata information required by DEEPaaS.
     """
     try:  # Call your AI model metadata() method
-        logger.info("Collecting metadata from: %s", config.MODEL_NAME)
+        logger.info("Collecting metadata from: %s", config.API_NAME)
         metadata = {
-            "author": config.MODEL_METADATA.get("authors"),
-            "author-email": config.MODEL_METADATA.get("author-emails"),
-            "description": config.MODEL_METADATA.get("summary"),
-            "license": config.MODEL_METADATA.get("license"),
-            "version": config.MODEL_METADATA.get("version"),
-            "datasets_local": utils.ls_dirs(Path(config.DATA_PATH)),
+            "author": config.API_METADATA.get("authors"),
+            "author-email": config.API_METADATA.get("author-emails"),
+            "description": config.API_METADATA.get("summary"),
+            "license": config.API_METADATA.get("license"),
+            "version": config.API_METADATA.get("version"),
+            "datasets_local": utils.ls_dirs(config.DATA_PATH),
             "datasets_remote": utils.ls_remote_dirs(suffix=".zip", exclude="additional_data"),
             "models_local": utils.ls_dirs(config.MODELS_PATH),
             "models_remote": utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude='perun_results'),
