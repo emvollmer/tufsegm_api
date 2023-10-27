@@ -42,9 +42,6 @@ The associated Docker container for this module can be found in https://github.c
 │   └── utils.py            <- API module with utility functions
 │
 ├── data                    <- Data subpackage for the integration with DEEP API
-│   ├── external            <- Data from third party sources.
-│   ├── processed           <- The final, canonical data sets for modeling.
-│   └── raw                 <- The original, immutable data dump.
 │
 ├── docs                   <- A default Sphinx project; see sphinx-doc.org for details
 │

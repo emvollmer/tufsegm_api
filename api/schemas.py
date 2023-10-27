@@ -31,9 +31,9 @@ class Dataset(fields.String):
     """
 
     def _deserialize(self, value, attr, data, **kwargs):
-        if value not in utils.ls_dir(config.DATA_PATH / "processed"):
+        if value not in utils.ls_dir(config.DATA_PATH):
             raise ValidationError(f"Dataset `{value}` not found.")
-        return str(config.DATA_PATH / "processed" / value)
+        return str(config.DATA_PATH / value)
 
 
 class NpyFile(fields.String):
@@ -74,7 +74,7 @@ class PredArgsSchema(marshmallow.Schema):
                            f"\nMUTUALLY EXCLUSIVE WITH input_file_external",
         },
         validate=validate.OneOf(
-            utils.ls_files(Path(config.DATA_PATH, "raw", "images"), "**/*.npy"),
+            utils.ls_files(Path(config.DATA_PATH, "images"), "**/*.npy"),
         ),
         required=True,
         #load_default=None  # TODO: Uncomment and remove "required" once input_file_external TODO is fixed

@@ -46,7 +46,7 @@ import api
 @pytest.fixture(scope="module", params=["t100-dataset.npz"])
 def input_file(request):
     """Fixture to provide the dataset argument to api.train."""
-    return f"{api.config.DATA_PATH}/processed/{request.param}"
+    return f"{api.config.DATA_PATH}/{request.param}"
 
 
 @pytest.fixture(scope="module", params=["test_simplemodel"])

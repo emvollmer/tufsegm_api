@@ -37,7 +37,7 @@ def get_metadata():
             "description": config.MODEL_METADATA.get("summary"),
             "license": config.MODEL_METADATA.get("license"),
             "version": config.MODEL_METADATA.get("version"),
-            "datasets_local": utils.ls_dirs(Path(config.DATA_PATH, "raw")),
+            "datasets_local": utils.ls_dirs(Path(config.DATA_PATH)),
             "datasets_remote": utils.ls_remote_dirs(suffix=".zip", exclude="additional_data"),
             "models_local": utils.ls_dirs(config.MODELS_PATH),
             "models_remote": utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude='perun_results'),
@@ -67,7 +67,7 @@ def predict(accept='application/json', **options):
         print(f"Using model '{options['model_name']}' for predictions")
         try:
             # Input file is local
-            options['input_file'] = str(Path(config.DATA_PATH, "raw", "images", options['input_file_local']))
+            options['input_file'] = str(Path(config.DATA_PATH, "images", options['input_file_local']))
             print(f"Predicting on image: ", options['input_file'])
         # TODO: Uncomment when input_file_external TODO is fixed
         # except TypeError:

@@ -79,7 +79,7 @@ def predict(**kwargs):
 def train(**kwargs):
     """Main/public method to perform training
     """
-    data_path = Path(kwargs['dataset_path'] or Path(api_cfg.DATA_PATH, "raw"))
+    data_path = Path(kwargs['dataset_path'] or Path(api_cfg.DATA_PATH))
     print(f"Training with the user defined parameters:\n{locals()}")
 
     # get file and folder names in data_path (non-recursive)
