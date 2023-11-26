@@ -40,8 +40,8 @@ echo "Update submodule."
 git pull --recurse-submodules
 # add branch name of submodule to .gitmodules
 if ! grep -q "branch = master" ".gitmodules"; then
-    echo -e "\tbranch = master" >> ".gitmodules"
-    echo "Added 'branch = master' to .gitmodules."
+   echo -e "\tbranch = master" >> ".gitmodules"
+   echo "Added 'branch = master' to .gitmodules."
 fi
 git submodule update --remote --recursive
 

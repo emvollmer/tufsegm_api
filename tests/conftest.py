@@ -17,13 +17,13 @@ import api
 
 
 @pytest.fixture(scope="session", autouse=True)
-def original_datapath():
+def tests_datapath():
     """Fixture to generate a original directory path for datasets."""
     return pathlib.Path(api.config.DATA_PATH).absolute()
 
 
 @pytest.fixture(scope="session", autouse=True)
-def original_modelspath():
+def tests_modelspath():
     """Fixture to generate a original directory path for datasets."""
     return pathlib.Path(api.config.MODELS_PATH).absolute()
 
@@ -35,24 +35,24 @@ def config_file(request):
     return pathlib.Path(config_str).absolute()
 
 
-@pytest.fixture(scope="module", name="testdir")
-def create_testdir():
+@pytest.fixture(scope="module", name="tmptestsdir")
+def create_tmptestsdir():
     """Fixture to generate a temporary directory for each test module."""
-    with tempfile.TemporaryDirectory() as testdir:
-        os.chdir(testdir)
-        yield testdir
+    with tempfile.TemporaryDirectory() as tmptestsdir:
+        os.chdir(tmptestsdir)
+        yield tmptestsdir
 
 
 @pytest.fixture(scope="module", autouse=True)
-def copytree_data(testdir, original_datapath):
+def copytree_data(tmptestsdir, tests_datapath):
     """Fixture to copy the original data directory to the test directory."""
-    shutil.copytree(original_datapath, f"{testdir}/{api.config.DATA_PATH}")
+    shutil.copytree(tests_datapath, f"{tmptestsdir}/{api.config.DATA_PATH}")
 
 
 @pytest.fixture(scope="module", autouse=True)
-def copytree_models(testdir, original_modelspath):
+def copytree_models(tmptestsdir, tests_modelspath):
     """Fixture to copy the original models directory to the test directory."""
-    shutil.copytree(original_modelspath, f"{testdir}/{api.config.MODELS_PATH}")
+    shutil.copytree(tests_modelspath, f"{tmptestsdir}/{api.config.MODELS_PATH}")
 
 
 def generate_signature(names, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD):

@@ -71,9 +71,9 @@ def predict(accept='application/json', **options):
             # print(f"Predicting on image: ", options['input_file'])
         # TODO: Uncomment when input_file_external TODO is fixed
         # except TypeError:
-        #     # Input file is external
-        #     options['input_file'] = options['input_file_external'].filename
-        #     print(f"Predicting on image: ", options['input_file_external'].original_filename)
+        #     # Input file is browsed from home directory
+        #     options['input_file'] = options['input_file_home'].filename
+        #     print(f"Predicting on image: ", options['input_file_home'].original_filename)
         # except Exception:
         #     raise HTTPException(reason=err) from err
 
@@ -100,6 +100,11 @@ def train(**options):
     Returns:
         Parsed history/summary of the training process.
     """
+    logger.handlers.clear()
+    hl = logging.StreamHandler()
+    hl.setLevel(config.LOG_LEVEL)
+    logger.addHandler(hl)
+
     try:  # Call your AI model train() method
         print(f"Retraining a '{options['model_type']}' model")    # logger.info
         logger.debug(f"Training with the user defined options: {options}")

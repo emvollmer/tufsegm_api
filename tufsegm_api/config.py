@@ -9,6 +9,7 @@ By convention, the CONSTANTS defined in this module are in UPPER_CASE.
 """
 import logging
 import os
+import os.path as osp
 from pathlib import Path
 import sys
 
@@ -23,16 +24,20 @@ if str(BASE_PATH) not in sys.path:
     sys.path.insert(0, str(BASE_PATH))
 
 # Path definition for data folder
-DATA_PATH = os.getenv("DATA_PATH", default=Path(BASE_PATH, "data"))
+DATA_PATH = os.getenv("DATA_PATH", default=osp.join(BASE_PATH, "data"))
+DATA_PATH = Path(BASE_PATH)
 # Path definition for the pre-trained models
-MODELS_PATH = os.getenv("MODELS_PATH", default=Path(BASE_PATH, "models"))
+MODELS_PATH = os.getenv("MODELS_PATH", default=osp.join(BASE_PATH, "models"))
+MODELS_PATH = Path(MODELS_PATH)
 
 MODEL_SUFFIX = ".hdf5"
 
 # Remote (rshare) paths for data and models
 REMOTE_PATH = os.getenv("REMOTE_PATH", default="rshare:tufsegm")
-REMOTE_DATA_PATH = os.getenv("REMOTE_DATA_PATH", default=Path(REMOTE_PATH, "data"))
-REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH", default=Path(REMOTE_PATH, "models"))
+REMOTE_DATA_PATH = os.getenv("REMOTE_DATA_PATH", default=osp.join(REMOTE_PATH, "data"))
+REMOTE_DATA_PATH = Path(REMOTE_DATA_PATH)
+REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH", default=osp.join(REMOTE_PATH, "models"))
+REMOTE_MODELS_PATH = Path(REMOTE_MODELS_PATH)
 
 # Define submodule name and path
 SUBMODULE_NAME = 'ThermUrbanFeatSegm'

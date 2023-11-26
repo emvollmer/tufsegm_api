@@ -94,16 +94,16 @@ class PredArgsSchema(marshmallow.Schema):
     # )
     # get external (local home) file from browsing
     # TODO: Field with "type" and "location" can't be optional but also can't be customized to search through data directory!
-    # input_file_external = fields.Field(
+    # input_file_home = fields.Field(
     #     metadata={
-    #         "description": f"Input image file path with .npy extension consisting of four channels for predictions."
-    #                        f"\nMUTUALLY EXCLUSIVE WITH input_file_local",
+    #         "description": f"Input image file path with .npy extension consisting of four channels for predictions.",
+    #                        # f"\nMUTUALLY EXCLUSIVE WITH input_file_local",
     #         "type": "file",
     #         "location": "form",
-    #         "accept": ".npy",
+    #         # "accept": ".npy",
     #     },
-    #     # required=False,
-    #     load_default=None
+    #     required=False,
+    #     #load_default="/io9320/Datasets/example_unet_data/MU_09/images/DJI_0_0003_R.npy"
     # )
 
     display = fields.Boolean(
@@ -124,15 +124,15 @@ class PredArgsSchema(marshmallow.Schema):
 
     # @marshmallow.validates_schema
     # def validate_required_fields(self, data):
-    #     if 'input_file_external' != None and 'input_file_local' != None:
+    #     if 'input_file_home' != None and 'input_file_local' != None:
     #         raise marshmallow.ValidationError(
     #             'Only a single image can be selected for prediction - either from the '
     #             'external directory or the local "data" repository folder.'
     #         )
-    #     if 'input_file_external' == None and 'input_file_local' == None:
+    #     if 'input_file_home' == None and 'input_file_local' == None:
     #         raise marshmallow.ValidationError(
     #             'No image file for inference was selected! '
-    #             'Fill in either the "input_file_external" or "input_file_local" field.'
+    #             'Fill in either the "input_file_home" or "input_file_local" field.'
     #         )
 
 
@@ -149,6 +149,7 @@ class TrainArgsSchema(marshmallow.Schema):
         validate=validate.OneOf(['UNet']),
         load_default="UNet",
     )
+
 
     dataset_path = fields.String(
         metadata={
