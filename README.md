@@ -1,17 +1,20 @@
 # tufsegm_api
 
-[![Build Status](https://jenkins.indigo-datacloud.eu/buildStatus/icon?job=Pipeline-as-code/DEEP-OC-org/tufsegm_api/master)](https://jenkins.indigo-datacloud.eu/job/Pipeline-as-code/job/DEEP-OC-org/job/tufsegm_api/job/master)
+[![Build Status](https://jenkins.indigo-datacloud.eu/buildStatus/icon?job=Pipeline-as-code/DEEP-OC-org/tufsegm_api/test)](https://jenkins.indigo-datacloud.eu/job/Pipeline-as-code/job/DEEP-OC-org/job/tufsegm_api/job/test)
 
-Deepaas API for thermal urban feature semantic segmentation model repo
+Deepaas API for thermal urban feature semantic segmentation model repo.
 
-To launch it, first install the package then run [deepaas](https://github.com/indigo-dc/DEEPaaS):
-
-> ![warning](https://img.shields.io/badge/Warning-red.svg) **Warning**: If you are using a virtual environment, make sure you are working with the last version of pip before installing the package. Use `pip install --upgrade pip` to upgrade pip.
-
+To facilitate setting up, the bash script `deployment_setup.sh` can be run to install everything automatically:
 ```bash
-git clone https://github.com/emvollmer/tufsegm_api
-cd tufsegm_api
-pip install -e .
+wget https://raw.githubusercontent.com/emvollmer/tufsegm_api/master/deployment_setup.sh
+source deployment_setup.sh
+```
+
+After setup, simply launch and run [deepaas](https://github.com/indigo-dc/DEEPaaS) via the script `deployment_run.sh`.
+```bash
+source deployment_run.sh
+# Alternatively, do
+source venv/bin/activate
 deepaas-run --listen-ip 0.0.0.0
 ```
 
@@ -39,9 +42,6 @@ The associated Docker container for this module can be found in https://github.c
 │   └── utils.py            <- API module with utility functions
 │
 ├── data                    <- Data subpackage for the integration with DEEP API
-│   ├── external            <- Data from third party sources.
-│   ├── processed           <- The final, canonical data sets for modeling.
-│   └── raw                 <- The original, immutable data dump.
 │
 ├── docs                   <- A default Sphinx project; see sphinx-doc.org for details
 │
