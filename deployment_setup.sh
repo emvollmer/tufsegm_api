@@ -32,7 +32,7 @@ fi
 # ########## Installing general OS prerequisites
 if ! dpkg -l | grep -q libgl1-mesa-glx; then
     echo "libgl1 not installed. Installing now..."
-    yes | apt-get install libgl1-mesa-glx
+    yes | apt install libgl1-mesa-glx
 else
     echo "libgl1 already installed. Requirement satisfied."
 fi
@@ -121,6 +121,8 @@ pip3 install -e ./$submod_name
 
 echo "Installing $api_name repository as editable..."
 pip3 install -e .
+
+pip3 install -r requirements-mlflow.txt
 
 deactivate
 

@@ -1,4 +1,4 @@
-"""Endpoint functions to integrate your model with the DEEPaaS API.
+"""Endpoint functions to integrate the submodule TUFSeg with the DEEPaaS API.
 
 For more information about how to edit the module see, take a look at the
 docs [1] and at a canonical exemplar module [2].
@@ -6,7 +6,9 @@ docs [1] and at a canonical exemplar module [2].
 [1]: https://docs.ai4eosc.eu/
 [2]: https://github.com/deephdc/demo_app
 """
+import getpass
 import logging
+import os
 from pathlib import Path
 import numpy as np
 
@@ -63,20 +65,27 @@ def predict(accept='application/json', **options):
     Returns:
         The predicted model values (dict or str) or files.
     """
-    try:  # Call your AI model predict() method
-        logger.info(f"Using model '{options['model_name']}' for predictions")
-        # try:
-            # # Input file is local
-            # options['input_file'] = str(Path(config.DATA_PATH, "images", options['input_file_local']))
-            # print(f"Predicting on image: ", options['input_file'])
-        # TODO: Uncomment when input_file_external TODO is fixed
-        # except TypeError:
-        #     # Input file is external
-        #     options['input_file'] = options['input_file_external'].filename
-        #     print(f"Predicting on image: ", options['input_file_external'].original_filename)
-        # except Exception:
-        #     raise HTTPException(reason=err) from err
+    print(f"User provided:\n{options}")
+    try:  # Call the AI model predict() method
+        if 'model_folder' in options.keys() and 'model_folder_new' in options.keys():
+            raise ValueError(
+                'Only one model can be selected for performing inference - either from the '
+                'offered list or entered folder path.'
+            )
+        if 'model_folder' not in options.keys() and 'model_folder_new' not in options.keys():
+            raise ValueError(
+                'No model folder path for inference was selected / provided! Select either '
+                'an option from the "model_folder" list or enter a value into the "model_folder_new" field.'
+            )
 
+        try:
+            # Model folder path is from input field 'model_folder'
+            options['model_name'] = options['model_folder']
+        except TypeError:
+            # Model folder path is from input field 'model_folder_new'
+            options['model_name'] = options['model_folder_new']
+
+        logger.info(f"Using model '{options['model_name']}' for predictions")
         print(f"Predicting with the user defined options: ", options)    # logger.debug
         result = aimodel.predict(**options)
         logger.debug(f"Predict result: ", result)
@@ -84,7 +93,8 @@ def predict(accept='application/json', **options):
         return responses.content_types[accept](result, **options)
     except Exception as err:
         logger.error("Error while doing predictions: %s", err, exc_info=True)
-        raise HTTPException(reason=err) from err
+        # raise HTTPException(reason=err) from err      # with this uncommented we get a TypeError, but without any raise we get a 200 response
+        raise
 
 
 @utils.train_arguments(schema=schemas.TrainArgsSchema)
@@ -100,7 +110,17 @@ def train(**options):
     Returns:
         Parsed history/summary of the training process.
     """
-    try:  # Call your AI model train() method
+    if options['mlflow_username']:
+        # for direct API calls via HTTP we need to inject credentials
+        MLFLOW_TRACKING_USERNAME = options['mlflow_username']
+        print(f"MLFlow model experiment tracking with account\nUsername: {MLFLOW_TRACKING_USERNAME}")
+        MLFLOW_TRACKING_PASSWORD =  getpass.getpass()  # inject password by typing manually
+        # for MLFLow-way we have to set the following environment variables
+        os.environ['MLFLOW_TRACKING_USERNAME'] = MLFLOW_TRACKING_USERNAME
+        os.environ['MLFLOW_TRACKING_PASSWORD'] = MLFLOW_TRACKING_PASSWORD
+        os.environ['LOGNAME'] = MLFLOW_TRACKING_USERNAME
+
+    try:  # Call the AI model train() method
         print(f"Retraining a '{options['model_type']}' model")    # logger.info
         logger.debug(f"Training with the user defined options: {options}")
         result = aimodel.train(**options)
@@ -116,6 +136,7 @@ if __name__ == "__main__":
     print(f"Metadata:\n{metadata}")
 
     # train_args = {
+    #     'mlflow,_username': None
     #     'model_type': 'UNet',
     #     'dataset_path': None,
     #     'save_for_viewing': False,
@@ -132,15 +153,14 @@ if __name__ == "__main__":
     #     **train_args
     # )
 
-    pred_args = {
-        'model_name': 'rshare:tufsegm/models/2023-09-21_11-42-18',    # '2023-09-27_16-19-41'
-        'input_file_local': 'KA_01/DJI_0_0001_R.npy',   # None
-        #'input_file_remote': None,     # UploadedFile(name='input_file_external', filename='/tmp/tmport1qpph', content_type='application/octet-stream', original_filename='DJI_....npy'),
-        'display': False,
-        #'save': True,
-        #'accept': 'application/json'
-    }
-    predict(
-        accept='application/json',
-        **pred_args
-    )
+    # pred_args = {
+    #     'model_folder': 'rshare:tufsegm/models/2023-09-21_11-42-18',    # '2023-09-27_16-19-41'
+    #     'input_file': 'KA_01/DJI_0_0001_R.npy',   # None
+    #     'display': False,
+    #     #'save': True,
+    #     #'accept': 'application/json'
+    # }
+    # predict(
+    #     accept='application/json',
+    #     **pred_args
+    # )

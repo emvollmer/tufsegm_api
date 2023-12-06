@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import sys
 
+MODULE_NAME = 'TUFSeg'
+
 # DEEPaaS can load more than one installed models. Therefore, in order to
 # avoid conflicts, each default PATH environment variables should lead to
 # a different folder. The current practice is to use the path from where the
@@ -54,3 +56,7 @@ else:
 # Data limits on node to uphold
 LIMIT_GB = int(os.getenv("LIMIT_GB", default="20"))
 DATA_LIMIT_GB = int(os.getenv("DATA_LIMIT_GB", default="15"))
+
+# Remote MLFlow server
+MLFLOW_REMOTE_SERVER="https://mlflow.dev.ai4eosc.eu/"
+MLFLOW_EXPERIMENT_NAME=MODULE_NAME + "_training"

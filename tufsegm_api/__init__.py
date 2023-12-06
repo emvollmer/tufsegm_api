@@ -13,7 +13,7 @@ import os
 
 import tufsegm_api.config as cfg
 
-from tufsegm_api.utils import copy_remote, unzip, setup, run_bash_subprocess
+from tufsegm_api.utils import copy_remote, unzip, setup, run_bash_subprocess, mlflow_logging
 
 from ThermUrbanFeatSegm.scripts.segm_models.infer_UNet import main as predict_func
 
@@ -140,22 +140,30 @@ def train(**kwargs):
                              'SIZE_H': kwargs['img_size'].split("x")[1],
                             }
     cfg_options_str = ' '.join([f"{key}={value}" for key, value in kwargs['cfg_options'].items()])
-    
+
     train_cmd = ["/bin/bash", str(Path(cfg.SUBMODULE_PATH, 'scripts', 'segm_models', 'train.sh')),
-                 "-dst", str(cfg.MODELS_PATH),
-                 "--channels", str(kwargs['channels']),
-                 "--processing", str(kwargs['processing']),
-                 "--cfg-options", cfg_options_str, # "--default-log"
-                 cfg.VERBOSITY]
+                "-dst", str(cfg.MODELS_PATH),
+                "--channels", str(kwargs['channels']),
+                "--processing", str(kwargs['processing']),
+                "--cfg-options", cfg_options_str, # "--default-log"
+                cfg.VERBOSITY]
     current_time = datetime.now()
     print(f"\nRunning training with arguments:\n{train_cmd}\n"
-          f"...at current time: {current_time.strftime('%Y-%m-%d_%H-%M-%S')}\n")
+        f"...at current time: {current_time.strftime('%Y-%m-%d_%H-%M-%S')}\n")
     run_bash_subprocess(train_cmd)
     print(f"Training and evaluation completed.")
 
+    # get path to which all model info has been saved
+    model_path = sorted(cfg.MODELS_PATH.glob("[!.]*"))[-1]
+
+    # track model with mlflow if user provided information
+    if kwargs['mlflow_username']:
+        print("Beginning MLFLow experiment logging...") # logging.info
+        mlflow_logging(model_root=Path(model_path))
+        print("Completed MLFLow experiment logging.") # logging.info
+
     # return training results - check existance of evaluation file in model folder and load from there
     try:
-        model_path = sorted(cfg.MODELS_PATH.glob("[!.]*"))[-1]
         model_time = datetime.strptime(model_path.name, "%Y-%m-%d_%H-%M-%S")
         if current_time - model_time <= timedelta(minutes=1):
             eval_file = Path(model_path, "eval.json")
@@ -175,17 +183,19 @@ def train(**kwargs):
 
 
 if __name__ == '__main__':
-    ex_args = {
-        'model_type': 'UNet',
-        'dataset_path': None,
-        'save_for_viewing': False,
-        'test_size': 0.2,
-        'channels': 4,
-        'processing': "basic",
-        'img_size': "320x256", # "640x512"
-        'epochs': 2,
-        'batch_size': 4,    # 8
-        'lr': 0.001,
-        'seed': 42
-    }
-    train(**ex_args)
+    print("Testing: training")
+    # ex_args = {
+    #     'mlflow_username': None,
+    #     'model_type': 'UNet',
+    #     'dataset_path': None,
+    #     'save_for_viewing': False,
+    #     'test_size': 0.2,
+    #     'channels': 4,
+    #     'processing': "basic",
+    #     'img_size': "320x256", # "640x512"
+    #     'epochs': 2,
+    #     'batch_size': 4,    # 8
+    #     'lr': 0.001,
+    #     'seed': 42
+    # }
+    # train(**ex_args)

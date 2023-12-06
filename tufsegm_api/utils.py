@@ -5,18 +5,26 @@ operate the methods defined at `__init__.py` or in your scripts.
 
 All functions here are optional and you can add or remove them as you need.
 """
+import getpass
+import json
 import logging
 import os
+from pandas.io.json._normalize import nested_to_record
 from pathlib import Path
 import signal
 import subprocess
 from subprocess import TimeoutExpired
+import mlflow
+import mlflow.tensorflow
+import tensorflow as tf
 import time
 import threading
 from typing import Union
 import zipfile
 
 import tufsegm_api.config as cfg
+from ThermUrbanFeatSegm.scripts.segm_models._utils import ModelLoader
+from ThermUrbanFeatSegm.scripts.configuration import read_conf
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
@@ -232,3 +240,63 @@ def run_bash_subprocess(cmd: list, timeout: int = 600):
     except subprocess.TimeoutExpired:
         print(f"Timeout during execution of bash script '{cmd[1]}'.")
         process.terminate()
+
+
+def mlflow_logging(model_root: Path):
+    """
+    Logging model experiment to MLFlow server.
+
+    :param model_root: Path to model folder
+    """
+    #Set the MLflow server and backend and artifact stores
+    mlflow.set_tracking_uri(cfg.MLFLOW_REMOTE_SERVER)
+
+    #set an experiment name for all different runs
+    mlflow.set_experiment(cfg.MLFLOW_EXPERIMENT_NAME)
+
+    model_config_path = Path(model_root, "run_config.json")
+    model_config = read_conf(model_config_path)
+    model_params = {
+        **model_config['model'], 
+        'classes': model_config['data']['masks']['labels'],
+        **model_config['data']['loader'],
+        **model_config['train']
+    }
+
+    model_loader = ModelLoader(model_config, model_root)
+    model = model_loader.model
+
+    with open(Path(model_root, "eval.json"), "r") as f:
+        model_metrics = json.load(f)
+        model_metrics = {
+            **model_metrics['sklearn metrics - combined imagewise results'], 
+            **model_metrics['sklearn metrics - combined imagewise classwise results']
+        }
+        model_metrics_flat = nested_to_record(model_metrics, sep=' ')
+        model_metrics_flat = {k.replace('(', '- ').replace(')', ''): v for k, v in model_metrics_flat.items()}
+
+    with mlflow.start_run(run_name=Path(model_root).name):
+        mlflow.tensorflow.log_model(model, artifact_path='artifacts')
+        # mlflow.tensorflow.log_model(model, signature=get_model_input_signature(model_config), artifact_path='artifacts')
+        mlflow.log_params(model_params)
+        print("MLFlow - logged training parameters.")
+        mlflow.log_metrics(model_metrics_flat)
+        print("MLFlow - logged evaluation metrics.")
+    
+    return
+
+
+# def get_model_input_signature(model_config):
+#     """
+#     Function to remove WARNING mlflow.tensorflow: You are saving a TensorFlow Core model or Keras model without a signature.
+#     Not yet functional.
+#     """
+#     height = model_config['data']['loader']['SIZE_H']
+#     width = model_config['data']['loader']['SIZE_W']
+#     channels = model_config['data']['loader']['channels']
+
+#     @tf.function(input_signature=[tf.TensorSpec(shape=[None, height, width, channels], dtype=tf.float32)])
+#     def serving_fn(inputs):
+#         return model(inputs)
+    
+#     return serving_fn

@@ -59,52 +59,38 @@ class PredArgsSchema(marshmallow.Schema):
     class Meta:  # Keep order of the parameters as they are defined.
         ordered = True
 
-    model_name = fields.String(
+    model_folder = fields.String(
         metadata={
-            "description": "Model to be used for prediction. If a remote folder (rshare:)"
-                           "is selected, it will automatically be downloaded from Nextcloud."
+            "description": "Model to be used for prediction. If a remote NextCloud folder (rshare:)"
+                           "is selected, it will be downloaded and all outputs will be saved to it.\n"
+                           "This list doesn't display just recently trained models to be selected. "
+                           "Enter the model folder path in the next field if you want the newest.\n"
+                           "MUTUALLY EXCLUSIVE WITH model_folder_new"
         },
         validate=validate.OneOf(
             utils.ls_dirs(config.MODELS_PATH) + 
             utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude="perun_results")
         ),
-        required=True,
+        required=False,
+    )
+
+    model_folder_new = fields.String(
+        metadata={
+            "description": "Model to be used for prediction. Enter the model folder path here if the "
+                           "model you want to use is not in the list above (as it's too new). \n"
+                           "MUTUALLY EXCLUSIVE WITH model_folder"
+        },
+        required=False,
     )
 
     input_file = NpyFile(
         metadata={
             "description": f"Insert a .npy path of a four channels file to infer on. Provide this in either one of two ways:"
                            f"\n- local path (in 'data/')\tf.e.: 'images/KA_01/DJI_0_0001_R.npy'"
-                           f"\n- remote path on Nextcloud\tf.e.: 'rshare:tufsegm/.../KA_01/DJI_0_0001_R.npy'",
+                           f"\n- remote path on Nextcloud\tf.e.: 'rshare:/tufsegm/.../KA_01/DJI_0_0001_R.npy'",
         },
         required=True,
     )
-
-    # get local deployment file from list
-    # input_file_local = fields.String(
-    #     metadata={
-    #         "description": f"Select image file with .npy extension consisting of four channels for predictions."
-    #                        f"\nMUTUALLY EXCLUSIVE WITH input_file_external",
-    #     },
-    #     validate=validate.OneOf(
-    #         utils.ls_files(Path(config.DATA_PATH, "images"), "**/*.npy"),
-    #     ),
-    #     required=True,
-    #     #load_default=None  # TODO: Uncomment and remove "required" once input_file_external TODO is fixed
-    # )
-    # get external (local home) file from browsing
-    # TODO: Field with "type" and "location" can't be optional but also can't be customized to search through data directory!
-    # input_file_external = fields.Field(
-    #     metadata={
-    #         "description": f"Input image file path with .npy extension consisting of four channels for predictions."
-    #                        f"\nMUTUALLY EXCLUSIVE WITH input_file_local",
-    #         "type": "file",
-    #         "location": "form",
-    #         "accept": ".npy",
-    #     },
-    #     # required=False,
-    #     load_default=None
-    # )
 
     display = fields.Boolean(
         metadata={
@@ -122,18 +108,19 @@ class PredArgsSchema(marshmallow.Schema):
         load_default='application/json',
     )
 
-    # @marshmallow.validates_schema
-    # def validate_required_fields(self, data):
-    #     if 'input_file_external' != None and 'input_file_local' != None:
+    # @marshmallow.post_load
+    # def validate_required_fields(self, data, **kwargs):
+    #     if 'model_folder' != None and 'model_folder_new' != None:
     #         raise marshmallow.ValidationError(
-    #             'Only a single image can be selected for prediction - either from the '
-    #             'external directory or the local "data" repository folder.'
+    #             'Only one model can be selected for performing inference - either from the '
+    #             'offered list or entered folder path.'
     #         )
-    #     if 'input_file_external' == None and 'input_file_local' == None:
+    #     if 'model_folder' == None and 'model_folder_new' == None:
     #         raise marshmallow.ValidationError(
-    #             'No image file for inference was selected! '
-    #             'Fill in either the "input_file_external" or "input_file_local" field.'
+    #             'No model folder path for inference was selected / provided! Select either '
+    #             'an option from the "model_folder" list or enter a value into the "model_folder_new" field.'
     #         )
+    #     return data
 
 
 class TrainArgsSchema(marshmallow.Schema):
@@ -141,6 +128,13 @@ class TrainArgsSchema(marshmallow.Schema):
 
     class Meta:  # Keep order of the parameters as they are defined.
         ordered = True
+
+    mlflow_username = fields.String(
+        metadata={
+            "description": "MLFlow username to be used for experiment tracking. Leave blank if you don't want to use MLFlow.",
+        },
+        load_default=None,
+    )
 
     model_type = fields.String(
         metadata={
