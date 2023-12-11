@@ -9,6 +9,7 @@ import getpass
 import json
 import logging
 import os
+import pandas as pd
 from pandas.io.json._normalize import nested_to_record
 from pathlib import Path
 import signal
@@ -214,7 +215,7 @@ def log_disk_usage(process_message: str):
     print(f"{process_message}: Repository currently takes up {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
 
 
-def run_bash_subprocess(cmd: list, timeout: int = 600):
+def run_bash_subprocess(cmd: list, timeout: int = 30000):
     """
     Run bash script call via subprocess command
     while printing all outputs to the terminal
@@ -263,9 +264,14 @@ def mlflow_logging(model_root: Path):
         **model_config['train']
     }
 
+    # load model
     model_loader = ModelLoader(model_config, model_root)
     model = model_loader.model
 
+    # load model history
+    model_history = pd.read_csv(Path(model_root, 'training_history.csv'), sep=',', engine='python')
+
+    # load evaluation data
     with open(Path(model_root, "eval.json"), "r") as f:
         model_metrics = json.load(f)
         model_metrics = {
@@ -282,6 +288,13 @@ def mlflow_logging(model_root: Path):
         print("MLFlow - logged training parameters.")
         mlflow.log_metrics(model_metrics_flat)
         print("MLFlow - logged evaluation metrics.")
+
+        # Log metrics to MLflow for each epoch
+        epoch_batches = 1  # Log metrics every 1 epochs (adjust as needed)
+        for epoch, (loss, val_loss) in enumerate(zip(round(model_history["loss"], 4), round(model_history["val_loss"], 4))):
+            if epoch % epoch_batches == 0:
+                mlflow.log_metric("train_loss", loss, step=epoch)
+                mlflow.log_metric("val_loss", val_loss, step=epoch)
     
     return
 
