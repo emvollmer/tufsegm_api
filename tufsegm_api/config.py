@@ -25,7 +25,7 @@ if str(BASE_PATH) not in sys.path:
 
 # Path definition for data folder
 DATA_PATH = os.getenv("DATA_PATH", default=osp.join(BASE_PATH, "data"))
-DATA_PATH = Path(BASE_PATH)
+DATA_PATH = Path(DATA_PATH)
 # Path definition for the pre-trained models
 MODELS_PATH = os.getenv("MODELS_PATH", default=osp.join(BASE_PATH, "models"))
 MODELS_PATH = Path(MODELS_PATH)
