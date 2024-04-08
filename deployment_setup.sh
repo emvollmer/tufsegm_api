@@ -6,12 +6,22 @@ if rclone listremotes | grep -q "rshare:" ; then
 
     if rclone about rshare: 2>&1 | grep -q "Used:" ; then
         echo "Connected to remote rshare."
-    else
-        echo "Password needs to be obscured to set up rshare..."
-        echo export RCLONE_CONFIG_RSHARE_PASS=$(rclone obscure $RCLONE_CONFIG_RSHARE_PASS) >> /root/.bashrc
-        source /root/.bashrc
+    else       
+        # check if password is obscured, obscure if not
+        if rclone about rshare: 2>&1 | grep -q "couldn't decrypt password: base64 decode failed when revealing password - is it obscured?" ; then
+            echo "Password needs to be obscured to set up rshare..."
+            echo export RCLONE_CONFIG_RSHARE_PASS=$(rclone obscure $RCLONE_CONFIG_RSHARE_PASS) >> /root/.bashrc
+            source /root/.bashrc
+        fi
+        # check for error due to rclone version being higher than 1.62.2, amend endpoint if required
+        if rclone about rshare: 2>&1 | grep -q "use the /dav/files/USER endpoint instead of /webdav" ; then
+            echo "RCLONE running with a higher version than 1.62. Overwriting /webdav endpoint with /dav/files/USER to fix this..."
+            echo export RCLONE_CONFIG_RSHARE_URL=${RCLONE_CONFIG_RSHARE_URL//webdav}/dav/files/${RCLONE_CONFIG_RSHARE_USER} >> /root/.bashrc
+            source /root/.bashrc
+        fi
+        # finally, make sure we now have access to our storage!
         if ! rclone about rshare: 2>&1 | grep -q "Used:" ; then
-            echo "Error in connecting to remote rshare."; sleep 5
+            echo "Error in connecting to remote rshare."; sleep 3
             if [ "$0" != "$BASH_SOURCE" ]; then
                 return 1
             else
@@ -31,8 +41,14 @@ fi
 
 # ########## Installing general OS prerequisites
 if ! dpkg -l | grep -q libgl1-mesa-glx; then
+    echo "libgl1-mesa-glx not installed. Installing now..."
+    yes | apt install libgl1-mesa-glx
+else
+    echo "libgl1-mesa-glx already installed. Requirement satisfied."
+fi
+if ! dpkg -l | grep -q libgl1; then
     echo "libgl1 not installed. Installing now..."
-    yes | apt-get install libgl1-mesa-glx
+    yes | update && apt-get install libgl1
 else
     echo "libgl1 already installed. Requirement satisfied."
 fi
