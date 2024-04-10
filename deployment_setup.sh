@@ -40,17 +40,18 @@ else
 fi
 
 # ########## Installing general OS prerequisites
-if ! dpkg -l | grep -q libgl1-mesa-glx; then
+if dpkg -l | grep libgl1 | grep -v libgl1-mesa; then
+    echo "libgl1 already installed. Requirement satisfied."
+else
+    echo "libgl1 not installed. Installing now..."
+    yes | apt-get install libgl1
+fi
+
+if dpkg -l | grep -q libgl1-mesa-glx; then
+    echo "libgl1-mesa-glx already installed. Requirement satisfied."
+else
     echo "libgl1-mesa-glx not installed. Installing now..."
     yes | apt install libgl1-mesa-glx
-else
-    echo "libgl1-mesa-glx already installed. Requirement satisfied."
-fi
-if ! dpkg -l | grep -q libgl1; then
-    echo "libgl1 not installed. Installing now..."
-    yes | update && apt-get install libgl1
-else
-    echo "libgl1 already installed. Requirement satisfied."
 fi
 
 # ########## Check current python version
