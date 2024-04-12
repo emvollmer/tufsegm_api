@@ -29,23 +29,24 @@ def get_metadata():
     Returns:
         A dictionary containing metadata information required by DEEPaaS.
     """
-    try:  # Call your AI model metadata() method
-        logger.info("Collecting metadata from: %s", config.API_NAME)
+    try:
+        logger.info("GET 'metadata' called. Collected data from: %s", config.API_NAME)
+        model_name = config.MODEL_TYPE + config.MODEL_SUFFIX
         metadata = {
             "author": config.API_METADATA.get("authors"),
             "author-email": config.API_METADATA.get("author-emails"),
             "description": config.API_METADATA.get("summary"),
             "license": config.API_METADATA.get("license"),
             "version": config.API_METADATA.get("version"),
-            "datasets_local": utils.ls_dirs(config.DATA_PATH),
-            "datasets_remote": utils.ls_remote_dirs(suffix=".zip", exclude="additional_data"),
-            "models_local": utils.ls_dirs(config.MODELS_PATH),
-            "models_remote": utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude='perun_results'),
+            "datasets_local": utils.get_dirs(config.DATA_PATH, entries={'images', 'annotations'}),
+            "datasets_remote": utils.get_dirs(config.REMOTE_PATH, entries={'images', 'annotations'}),
+            "models_local": utils.get_dirs(config.MODELS_PATH, entries={model_name}),
+            "models_remote": utils.get_dirs(config.REMOTE_PATH, entries={model_name}),
         }
         logger.debug("Package model metadata: %s", metadata)
         return metadata
     except Exception as err:
-        logger.error("Error collecting metadata: %s", err, exc_info=True)
+        logger.error("Error calling GET 'metadata': %s", err, exc_info=True)
         raise HTTPException(reason=err) from err
 
 
@@ -63,27 +64,15 @@ def predict(accept='application/json', **options):
     Returns:
         The predicted model values (dict or str) or files.
     """
-    try:  # Call your AI model predict() method
-        logger.info(f"Using model '{options['model_name']}' for predictions")
-        # try:
-            # # Input file is local
-            # options['input_file'] = str(Path(config.DATA_PATH, "images", options['input_file_local']))
-            # print(f"Predicting on image: ", options['input_file'])
-        # TODO: Uncomment when input_file_external TODO is fixed
-        # except TypeError:
-        #     # Input file is browsed from home directory
-        #     options['input_file'] = options['input_file_home'].filename
-        #     print(f"Predicting on image: ", options['input_file_home'].original_filename)
-        # except Exception:
-        #     raise HTTPException(reason=err) from err
-
-        print(f"Predicting with the user defined options: ", options)    # logger.debug
+    try:
+        for k, v in options.items():
+            logger.info(f"POST 'predict' argument - {k}:\t{v}")
         result = aimodel.predict(**options)
-        logger.debug(f"Predict result: ", result)
-        print(f"Returning content_type for: ", accept)    # logger.info
+        logger.info("POST 'predict' result: %s", result)
+        logger.debug("POST 'predict' returning content_type for: %s", accept)    # logger.info
         return responses.content_types[accept](result, **options)
     except Exception as err:
-        logger.error("Error while doing predictions: %s", err, exc_info=True)
+        logger.error("Error while running POST 'predict': %s", err, exc_info=True)
         raise HTTPException(reason=err) from err
 
 
@@ -100,19 +89,14 @@ def train(**options):
     Returns:
         Parsed history/summary of the training process.
     """
-    logger.handlers.clear()
-    hl = logging.StreamHandler()
-    hl.setLevel(config.LOG_LEVEL)
-    logger.addHandler(hl)
-
-    try:  # Call your AI model train() method
-        print(f"Retraining a '{options['model_type']}' model")    # logger.info
-        logger.debug(f"Training with the user defined options: {options}")
+    try:
+        for k, v in options.items():
+            logger.info(f"POST 'train' argument - {k}:\t{v}")
         result = aimodel.train(**options)
-        logger.debug(f"Training result: {result}")
+        logger.info(f"POST 'train' result: {result}")
         return result
     except Exception as err:
-        logger.error("Error while training: %s", err, exc_info=True)
+        logger.error("Error while running 'POST' predict: %s", err, exc_info=True)
         raise  # Reraise the exception after log
 
 
@@ -121,15 +105,15 @@ if __name__ == "__main__":
     print(f"Metadata:\n{metadata}")
 
     # train_args = {
-    #     'model_type': 'UNet',
+    #     # 'model_type': 'UNet',
     #     'dataset_path': None,
     #     'save_for_viewing': False,
     #     'test_size': 0.2,
     #     'channels': 4,
     #     'processing': "basic",
-    #     'img_size': "320x256", # "640x512",
+    #     'img_size': "320x256",
     #     'epochs': 1,
-    #     'batch_size': 4, # 8,
+    #     'batch_size': 4,
     #     'lr': 0.001,
     #     'seed': 42
     # }
@@ -138,9 +122,8 @@ if __name__ == "__main__":
     # )
 
     pred_args = {
-        'model_name': 'rshare:tufsegm/models/2023-09-21_11-42-18',    # '2023-09-27_16-19-41'
-        'input_file_local': 'KA_01/DJI_0_0001_R.npy',   # None
-        #'input_file_remote': None,     # UploadedFile(name='input_file_external', filename='/tmp/tmport1qpph', content_type='application/octet-stream', original_filename='DJI_....npy'),
+        'model_name': '/storage/tufsegm/models/2023-09-21_11-42-18',
+        'input_file': '/storage/tugsegm/additional_data/images_for_predict/MU_09/DJI_0_0001_R.npy',
         'display': False,
         #'save': True,
         #'accept': 'application/json'

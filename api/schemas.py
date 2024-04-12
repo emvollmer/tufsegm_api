@@ -1,10 +1,6 @@
 """Module for defining custom web fields to use on the API interface.
 This module is used by the API server to generate the input form for the
-prediction and training methods. You can use any of the defined schemas
-to add new inputs to your API.
-
-The module shows simple but efficient example schemas. However, you may
-need to modify them for your needs.
+prediction and training methods.
 """
 import marshmallow
 from pathlib import Path
@@ -42,15 +38,12 @@ class NpyFile(fields.String):
     whilst also ensuring it's a numpy file.
     """
     def _deserialize(self, value, attr, data, **kwargs):
-        if value in utils.ls_files(Path(config.DATA_PATH), "**/*.npy"):
-            return value
-        elif value.startswith("rshare:"):
-            if value in utils.ls_remote_files(".npy"):
+        if Path(value).is_file():
+            if value.endswith(".npy"):
                 return value
-            else:
-                raise ValidationError(f"Provided file path `{value}` does not exist in NextCloud.")
+            raise ValidationError(f"Provided file path `{value}` is not a numpy file.")
         else:
-            raise ValidationError(f"Provided file path `{value}` does not exist locally.")
+            raise ValidationError(f"Provided file path `{value}` does not exist.")
 
 
 class PredArgsSchema(marshmallow.Schema):
@@ -61,12 +54,12 @@ class PredArgsSchema(marshmallow.Schema):
 
     model_name = fields.String(
         metadata={
-            "description": "Model to be used for prediction. If a remote folder (rshare:)"
-                           "is selected, it will automatically be downloaded from Nextcloud."
+            "description": "Model to be used for prediction. If a remote folder (/storage/)"
+                           "is selected, prediction results will be saved there."
         },
         validate=validate.OneOf(
-            utils.ls_dirs(config.MODELS_PATH) + 
-            utils.ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude="perun_results")
+            utils.get_dirs(config.MODELS_PATH, entries={config.MODEL_TYPE + config.MODEL_SUFFIX}) + 
+            utils.get_dirs(config.REMOTE_PATH, entries={config.MODEL_TYPE + config.MODEL_SUFFIX})
         ),
         required=True,
     )
@@ -75,36 +68,10 @@ class PredArgsSchema(marshmallow.Schema):
         metadata={
             "description": f"Insert a .npy path of a four channels file to infer on. Provide this in either one of two ways:"
                            f"\n- local path (in 'data/')\tf.e.: 'images/KA_01/DJI_0_0001_R.npy'"
-                           f"\n- remote path on Nextcloud\tf.e.: 'rshare:tufsegm/.../KA_01/DJI_0_0001_R.npy'",
+                           f"\n- remote path on Nextcloud\tf.e.: '/storage/tufsegm/.../KA_01/DJI_0_0001_R.npy'",
         },
         required=True,
     )
-
-    # get local deployment file from list
-    # input_file_local = fields.String(
-    #     metadata={
-    #         "description": f"Select image file with .npy extension consisting of four channels for predictions."
-    #                        f"\nMUTUALLY EXCLUSIVE WITH input_file_external",
-    #     },
-    #     validate=validate.OneOf(
-    #         utils.ls_files(Path(config.DATA_PATH, "images"), "**/*.npy"),
-    #     ),
-    #     required=True,
-    #     #load_default=None  # TODO: Uncomment and remove "required" once input_file_external TODO is fixed
-    # )
-    # get external (local home) file from browsing
-    # TODO: Field with "type" and "location" can't be optional but also can't be customized to search through data directory!
-    # input_file_home = fields.Field(
-    #     metadata={
-    #         "description": f"Input image file path with .npy extension consisting of four channels for predictions.",
-    #                        # f"\nMUTUALLY EXCLUSIVE WITH input_file_local",
-    #         "type": "file",
-    #         "location": "form",
-    #         # "accept": ".npy",
-    #     },
-    #     required=False,
-    #     #load_default="/io9320/Datasets/example_unet_data/MU_09/images/DJI_0_0003_R.npy"
-    # )
 
     display = fields.Boolean(
         metadata={
@@ -122,19 +89,6 @@ class PredArgsSchema(marshmallow.Schema):
         load_default='application/json',
     )
 
-    # @marshmallow.validates_schema
-    # def validate_required_fields(self, data):
-    #     if 'input_file_home' != None and 'input_file_local' != None:
-    #         raise marshmallow.ValidationError(
-    #             'Only a single image can be selected for prediction - either from the '
-    #             'external directory or the local "data" repository folder.'
-    #         )
-    #     if 'input_file_home' == None and 'input_file_local' == None:
-    #         raise marshmallow.ValidationError(
-    #             'No image file for inference was selected! '
-    #             'Fill in either the "input_file_home" or "input_file_local" field.'
-    #         )
-
 
 class TrainArgsSchema(marshmallow.Schema):
     """Training arguments schema for api.train function."""
@@ -142,21 +96,24 @@ class TrainArgsSchema(marshmallow.Schema):
     class Meta:  # Keep order of the parameters as they are defined.
         ordered = True
 
-    model_type = fields.String(
-        metadata={
-            "description": "Segmentation model type.",
-        },
-        validate=validate.OneOf(['UNet']),
-        load_default="UNet",
-    )
-
+    # model_type = fields.String(
+    #     metadata={
+    #         "description": "Segmentation model type.",
+    #     },
+    #     validate=validate.OneOf(['UNet']),
+    #     load_default="UNet",
+    # )
 
     dataset_path = fields.String(
         metadata={
             "description": "Path to the dataset. If none is provided, "
                            "the dataset in the 'data' folder will be used or else "
-                           "downloaded from Nextcloud.",
+                           "downloaded from Nextcloud if local 'data' is empty.",
         },
+        validate=validate.OneOf(
+            utils.get_dirs(config.DATA_PATH, entries={'images', 'annotations'}) + 
+            utils.get_dirs(config.REMOTE_PATH, entries={'images', 'annotations'})
+        ),
         required=False,
         load_default=None
     )

@@ -13,63 +13,33 @@ import os
 
 import tufsegm_api.config as cfg
 
-from tufsegm_api.utils import copy_remote, unzip, setup, run_bash_subprocess
+from tufsegm_api.utils import copy_remote, unzip, setup, run_bash_subprocess, configure_api_logging
 
 from ThermUrbanFeatSegm.scripts.segm_models.infer_UNet import main as predict_func
 
 logger = logging.getLogger(__name__)
-logger.setLevel(cfg.LOG_LEVEL)
+configure_api_logging(logger, cfg.LOG_LEVEL)
+
+
+class ResultError(Exception):
+    """Raised when disk space is exceeded."""
+    pass
 
 
 def predict(**kwargs):
     """Main/public method to perform prediction
+    --- WITHOUT COPYING DATA OR MODELS (WORKING IN NEXTCLOUD IF THAT'S WHERE THE DATA/MODEL IS)
     """
-    # If model_name is a remote directory ('rshare'), download it to the models directory
-    if 'rshare:' in kwargs['model_name']:
+    model_path = Path(kwargs['model_name'])
+    logger.debug(f"Predicting with model: {model_path}")
 
-        # check if folder of same name exists locally, don't copy if that's the case
-        remote_folder_name = Path(kwargs['model_name']).name
-        if remote_folder_name in os.listdir(cfg.MODELS_PATH):
-            print(f"Model folder '{kwargs['model_name']}' contains 'rshare:' but exists locally. "
-                  f"Using local folder instead...")
-        else:
-            print(f"Model folder '{kwargs['model_name']}' contains 'rshare:'. "
-                  f"Downloading from '{cfg.REMOTE_MODELS_PATH}'...")
-            copy_remote(frompath=Path(kwargs['model_name']),
-                        topath=Path(cfg.MODELS_PATH, remote_folder_name))
-
-        # redefine the model name as only the folder itself
-        kwargs['model_name'] = remote_folder_name
-
-    # define the model path
-    model_path = Path(cfg.MODELS_PATH, kwargs['model_name'])
-    if not Path(model_path).is_dir():
-        raise FileNotFoundError(f"Model folder '{model_path}' does not exist!")
-
-    print(f"Predicting with the model at: {model_path}")
-
-    # If input_file is a remote ('rshare:'), download it to the data folder
-    if 'rshare:' in kwargs['input_file']:
-
-        # check if file of same name exists locally, don't copy if that's the case
-        remote_file_name = Path(kwargs['input_file']).relative_to(cfg.REMOTE_PATH)
-        if Path(cfg.DATA_PATH, remote_file_name).is_file():
-            print(f"Input file '{kwargs['input_file']}' contains 'rshare:' but exists locally. "
-                  f"Using local file instead...")
-        else:
-            print(f"Input file '{kwargs['input_file']}' contains 'rshare:'. "
-                  f"Downloading from '{cfg.REMOTE_PATH}'...")
-            copy_remote(frompath=Path(kwargs['input_file']),
-                        topath=Path(cfg.DATA_PATH, remote_file_name).parent)
-
-        # redefine the input_file as only the file itself
-        kwargs['input_file'] = remote_file_name
-
-    # define the input file path
-    input_file_path = Path(cfg.DATA_PATH, kwargs['input_file'])
+    # if input_file is a remote file ('/storage/'), work remotely
+    if cfg.REMOTE_PATH in kwargs['input_file']:
+        input_file_path = Path(kwargs['input_file'])
+    else:
+        input_file_path = Path(cfg.DATA_PATH, kwargs['input_file'])
     
-    print(f"Predicting on image: {input_file_path}")
-    logger.info(f"Predicting on image: {input_file_path}")  # this does nothing!
+    logger.debug(f"Predicting on image: {input_file_path}")
 
     # prediction
     predict_func(
@@ -84,7 +54,7 @@ def predict(**kwargs):
     # return results of prediction
     if Path(model_path, 'predictions').is_dir():
         pred_results = [f for f in Path(model_path, 'predictions').rglob("*.npy") 
-                        if Path(kwargs['input_file']).name == f.name]
+                        if Path(input_file_path).name == f.name]
         if pred_results:
             predict_result = {'result': f'predicted segmentation results saved to {pred_results[0]}'}
         else:
@@ -101,29 +71,35 @@ def train(**kwargs):
     """Main/public method to perform training
     """
     data_path = Path(kwargs['dataset_path'] or Path(cfg.DATA_PATH))
-    print(f"Training with the user defined parameters:\n{locals()}")
+    logger.debug(f"Training on data from: {data_path}")
+    
+    # get data - check files in local data_path, if no setup, check NextCloud
+    data_entries = set(os.listdir(data_path))
+    required_entries = {"images", "annotations"}
 
-    # get file and folder names in data_path (non-recursive)
-    data_path_entries = os.listdir(str(data_path))
+    if not data_entries >= required_entries:
 
-    # if no data in local data folder, download it from Nextcloud
-    if not all(e in data_path_entries for e in ["images", "annotations"]):
-        print(f"Data folder '{data_path}' is empty, "
-              f"downloading data from '{cfg.REMOTE_DATA_PATH}'...")
-        copy_remote(frompath=cfg.REMOTE_DATA_PATH,
-                    topath=data_path)
+        if set(os.listdir(cfg.REMOTE_DATA_PATH)) >= required_entries:
+            logger.info(f"Data folder '{data_path}' does not contain images & annotations, "
+                        f"downloading data from '{cfg.REMOTE_DATA_PATH}'...")
+            copy_remote(frompath=Path(cfg.REMOTE_DATA_PATH), topath=Path(data_path))
+
+        else:
+            raise FileNotFoundError(f"Remote data folder '{cfg.REMOTE_DATA_PATH}' "
+                                    f"does not contain required data.")
 
     # if zipped data in local data folder, unzip it
     zip_paths = list(data_path.rglob("*.zip"))
-    print(f"Extracting data from {len(zip_paths)} .zip files...")
-    for zip_path in zip_paths:
-        unzip(zip_file=zip_path)
-    
-        print("Cleaning up zip file...")
-        zip_path.unlink()
+    if zip_paths:
+        logger.info(f"Extracting data from {len(zip_paths)} .zip files...")
+        for zip_path in zip_paths:
+            unzip(zip_file=zip_path)
+        
+            logger.info("Cleaning up zip file...")
+            zip_path.unlink()
 
-    # prepare data
-    if not all(e in data_path_entries for e in ["masks", "train.txt", "test.txt"]):
+    # prepare data if not yet done
+    if not data_entries >= {"masks", "train.txt", "test.txt"}:
         setup(
             data_path=data_path, 
             test_size=kwargs['test_size'],
@@ -131,7 +107,6 @@ def train(**kwargs):
         )
 
     # train model
-    logger.info("Starting training...")
     kwargs['cfg_options'] = {'epochs': kwargs['epochs'],
                              'batch_size': kwargs['batch_size'],
                              'lr': kwargs['lr'],
@@ -145,46 +120,46 @@ def train(**kwargs):
                  "-dst", str(cfg.MODELS_PATH),
                  "--channels", str(kwargs['channels']),
                  "--processing", str(kwargs['processing']),
-                 "--cfg-options", cfg_options_str, # "--default-log"
+                 "--cfg-options", cfg_options_str,
                  cfg.VERBOSITY]
-    current_time = datetime.now()
-    print(f"\nRunning training with arguments:\n{train_cmd}\n"
-          f"...at current time: {current_time.strftime('%Y-%m-%d_%H-%M-%S')}\n")
-    run_bash_subprocess(train_cmd)
-    print(f"Training and evaluation completed.")
 
-    # return training results - check existance of evaluation file in model folder and load from there
+    creation_time = datetime.now()
+
+    logger.info(f"Training with arguments:\n{train_cmd}")
+    run_bash_subprocess(train_cmd)
+    logger.info(f"Training and evaluation completed.")
+
+    # return training results, if the correct model folder exists and had a usable eval
     try:
         model_path = sorted(cfg.MODELS_PATH.glob("[!.]*"))[-1]
-        model_time = datetime.strptime(model_path.name, "%Y-%m-%d_%H-%M-%S")
-        if current_time - model_time <= timedelta(minutes=1):
-            eval_file = Path(model_path, "eval.json")
-            if eval_file.is_file():
-                with open(eval_file, "r") as f:
-                    train_result = json.load(f)
-            else:
-                train_result = {'result': 'error during training or evaluation, no model scores saved.'}
-        else:
-            train_result = {'result': f'error during training, no model folder similar to '
-                                      f'{current_time.strftime("%Y-%m-%d_%H-%M-%S")} exists.'}
-    except IndexError:
-        train_result = {'result': f'error during training, no model folders exist at {cfg.MODELS_PATH}'}
 
-    logger.debug(f"[train()]: {train_result}")
-    return train_result
+        model_time = datetime.strptime(model_path.name, "%Y-%m-%d_%H-%M-%S")
+        if creation_time - model_time <= timedelta(minutes=1):
+            eval_file = Path(model_path, "eval.json")
+            with open(eval_file, "r") as f:
+                train_result = json.load(f)
+                return train_result
+        else:
+            raise ResultError(f'error during training, no model folder similar to '
+                              f'{creation_time.strftime("%Y-%m-%d_%H-%M-%S")} exists.')
+    except IndexError as e:
+        raise ResultError(f'Error during training, no model folders exist at {cfg.MODELS_PATH}. ', e)
+
+    except FileNotFoundError as e:
+        raise ResultError(f'Error during training or evaluation, no model scores saved. ', e)
 
 
 if __name__ == '__main__':
     ex_args = {
-        'model_type': 'UNet',
+        # 'model_type': 'UNet',
         'dataset_path': None,
         'save_for_viewing': False,
         'test_size': 0.2,
         'channels': 4,
         'processing': "basic",
-        'img_size': "320x256", # "640x512"
-        'epochs': 2,
-        'batch_size': 4,    # 8
+        'img_size': "320x256",
+        'epochs': 1,
+        'batch_size': 9,
         'lr': 0.001,
         'seed': 42
     }

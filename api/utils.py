@@ -1,12 +1,8 @@
 """Utilities module for API endpoints and methods.
-This module is used to define API utilities and helper functions. You can
-use and edit any of the defined functions to improve or add methods to
-your API.
-
-The module shows simple but efficient example utilities. However, you may
-need to modify them for your needs.
+This module is used to define API utilities and helper functions.
 """
 import logging
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -19,98 +15,21 @@ logger = logging.getLogger(__name__)
 logger.setLevel(config.LOG_LEVEL)
 
 
-def ls_dirs(path: Path):
-    """Utility to return a list of directories available in `path` folder.
+def get_dirs(root_dir: str, entries: set = {}):
+    """Utility to return a list of directories containing 
+    specific folder / file entries.
+        - get_dirs(root_dir=config.DATA_PATH, entries={'images', 'annotations'})
+        - get_dirs(root_dir=config.REMOTE_PATH, entries={'UNet.hdf5'})
 
     Arguments:
-        path -- Directory path to scan for folders.
-
-    Returns:
-        A list of strings for found subdirectories.
+        root_dir (str): directory path to scan
+        entries (set): entry patterns to search for, defaults to {}
     """
-    logger.debug("Scanning directories at: %s", path)
-    dirscan = (x.name for x in path.iterdir() if x.is_dir())
+    dirscan = [
+        root for root, dirs, files in os.walk(root_dir)
+        if entries <= set(dirs) or entries <= set(files)
+    ]
     return sorted(dirscan)
-
-
-def ls_files(path: Path, pattern: str):
-    """Utility to return a list of files available in `path` folder
-    with a specific pattern.
-        - `ls_files(path=config.MODEL_PATH, pattern='*')`
-        - `ls_files(path=config.DATA_PATH, pattern='**/*.npy')`
-
-    Arguments:
-        path -- Directory path to scan.
-        pattern -- File pattern to filter found files. See glob.glob() python.
-
-    Returns:
-        A list of strings for files found according to the pattern.
-    """
-    logger.debug(f"Scanning for {pattern} files at: {path}")
-    #return sorted([str(p) for p in path.glob(pattern)])
-    #return sorted([str(Path(p.parent.name, p.name)) for p in path.glob(pattern)])
-    return sorted([str(p.relative_to(path)) for p in path.glob(pattern)])
-
-
-def ls_remote_dirs(suffix: str, exclude: Union[None, str] = None, timeout=600):
-    """Utility to return a list of remote (e.g. NextCloud) directories
-    containing files with a specific suffix.
-        - `ls_remote_dirs(suffix=config.MODEL_SUFFIX, exclude='perun_results')`
-        - `ls_remote_dirs(suffix='.zip')`
-
-    Arguments:
-        suffix -- File suffix to filter found files.
-        exclude -- String to exclude specific files with from the list of directories.
-        timeout -- Timeout in seconds for the reading command.
-
-    Returns:
-        A tuple with stdout and stderr from the command.
-    """
-    dirscan = ls_remote_files(suffix=suffix, timeout=timeout)
-    if dirscan:
-        if exclude is not None:
-            dirscan = [str(Path(f).parent).rstrip("/") for f in dirscan if not exclude in f]
-        else:
-            dirscan = [str(Path(f).parent).rstrip("/") for f in dirscan]
-    return list(set(dirscan))   # removes duplicates
-
-
-def ls_remote_files(suffix: str, timeout=600):
-    """Utility to return a list of remote (e.g. NextCloud) files
-    with a specific suffix.
-        - `ls_remote_files(suffix=config.MODEL_SUFFIX)`
-        - `ls_remote_files(suffix='.npy')`
-
-    Arguments:
-        suffix -- File suffix to filter found files.
-        timeout -- Timeout in seconds for the reading command.
-
-    Returns:
-        A list of files in config.REMOTE_PATH that match the 
-    """
-    frompath = config.REMOTE_PATH
-    with subprocess.Popen(
-        args=["rclone", "lsf", f"{frompath}", "-R", "--absolute"],
-        stdout=subprocess.PIPE,  # Capture stdout
-        stderr=subprocess.PIPE,  # Capture stderr
-        text=True,  # Return strings rather than bytes
-    ) as process:
-        try:
-            outs, errs = process.communicate(None, timeout)
-
-            files = outs.splitlines()
-            filescan = [frompath + str(Path(f)) for f in files if f.endswith(suffix)]
-            return filescan
-        except TimeoutExpired:
-            logger.error(f"Timeout when reading remote directory '{frompath}'.")
-            process.kill()
-            outs, errs = process.communicate()
-            return []
-        except Exception as exc:  # pylint: disable=broad-except
-            logger.error(f"Error reading remote directory '{frompath}': %s", exc, exc_info=True)
-            process.kill()
-            outs, errs = process.communicate()
-            return []
 
 
 def generate_arguments(schema):

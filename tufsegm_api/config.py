@@ -1,10 +1,6 @@
 """Module to define CONSTANTS used across the AI-model package.
 
 This module is used to define CONSTANTS used across the AI-model package.
-Do not misuse this module to define variables that are not CONSTANTS or
-that are exclusive to the `api` package. You can use the `config.py`
-inside `api` to define exclusive CONSTANTS related to your interface.
-
 By convention, the CONSTANTS defined in this module are in UPPER_CASE.
 """
 import logging
@@ -13,7 +9,7 @@ import os.path as osp
 from pathlib import Path
 import sys
 
-# DEEPaaS can load more than one installed models. Therefore, in order to
+# DEEPaaS can load more than one installed model. Therefore, in order to
 # avoid conflicts, each default PATH environment variables should lead to
 # a different folder. The current practice is to use the path from where the
 # model source is located.
@@ -30,10 +26,11 @@ DATA_PATH = Path(DATA_PATH)
 MODELS_PATH = os.getenv("MODELS_PATH", default=osp.join(BASE_PATH, "models"))
 MODELS_PATH = Path(MODELS_PATH)
 
+MODEL_TYPE = "UNet"
 MODEL_SUFFIX = ".hdf5"
 
 # Remote (rshare) paths for data and models
-REMOTE_PATH = os.getenv("REMOTE_PATH", default="rshare:tufsegm")
+REMOTE_PATH = os.getenv("REMOTE_PATH", default="/storage/tufsegm")    # replaced "rshare:tufsegm"
 REMOTE_DATA_PATH = os.getenv("REMOTE_DATA_PATH", default=osp.join(REMOTE_PATH, "data"))
 REMOTE_DATA_PATH = Path(REMOTE_DATA_PATH)
 REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH", default=osp.join(REMOTE_PATH, "models"))

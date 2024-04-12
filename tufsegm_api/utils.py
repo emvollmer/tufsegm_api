@@ -1,16 +1,17 @@
 """Package to create datasets, pipelines and other utilities.
 
-You can use this module for example, to write all the functions needed to
-operate the methods defined at `__init__.py` or in your scripts.
-
-All functions here are optional and you can add or remove them as you need.
+This module is used to define all the functions needed to
+operate the methods defined at `__init__.py`.
 """
 import logging
+from math import floor
 import os
 from pathlib import Path
 import signal
+import shutil
 import subprocess
 from subprocess import TimeoutExpired
+from tensorflow.config.experimental import list_physical_devices
 import time
 import threading
 from typing import Union
@@ -27,23 +28,46 @@ class DiskSpaceExceeded(Exception):
     pass
 
 
-def copy_remote(frompath, topath, timeout=600):
-    """Copies remote (e.g. NextCloud) folder in your local deployment or
+class SubprocessError(Exception):
+    """Raised when disk space is exceeded."""
+    pass
+
+
+def configure_api_logging(logger, log_level: int):
+    """Define basic logging configuration
+
+    :param logger: logger
+    :param log_level: User defined input
+    """
+    log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # Define logging to the console
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    console_handler.setFormatter(log_format)
+    logger.addHandler(console_handler)
+    logger.setLevel(log_level)
+
+
+def copy_remote(frompath, topath):
+    """Copies remote (e.g. NextCloud) folder/file in your local deployment or
     vice versa for example:
-        - `copy_remote('rshare:data/images', '/srv/myapp/data/images')`
+        - `copy_remote('/storage/data/images', '/srv/myapp/data/images')`
     Ensures deployment node space isn't being exceeded during copying.
 
-    Arguments:
-        frompath -- Source folder to be copied.
-        topath -- Destination folder.
-        timeout -- Timeout in seconds for the copy command.
+    Args:
+        frompath (Path): The path to the file to be copied
+        topath (Path): The path to the destination folder directory
 
-    Returns:
-        A tuple with stdout and stderr from the command.
+    Raises:
+        OSError: If the source isn't a directory
+        FileNotFoundError: If the source file doesn't exist
     """
-    log_disk_usage("Begin to copying from NextCloud")
-    # get absolute limit by comparing to remaining available space on node
-    limit_gb = check_node_disk_limit()
+    frompath: Path = Path(frompath)
+    topath: Path = Path(topath)
+
+    log_disk_usage("Begin copying from NextCloud")
+    limit_gb = check_node_disk_limit()  # get absolute limit by comparing with available node space
 
     try:
         # monitor disk space usage in the background
@@ -51,26 +75,21 @@ def copy_remote(frompath, topath, timeout=600):
                                           args=(limit_gb,), daemon=True)
         monitor_thread.start()
 
-        print(f"Copying with rclone from '{frompath}' to '{topath}'...")    # logger.debug
-        with subprocess.Popen(
-            args=["rclone", "copy", f"{frompath}", f"{topath}"],
-            stdout=subprocess.PIPE,  # Capture stdout
-            stderr=subprocess.PIPE,  # Capture stderr
-            text=True,  # Return strings rather than bytes
-        ) as process:
-            try:
-                outs, errs = process.communicate(None, timeout)
-                if errs != '':
-                    raise Exception(errs)
-            except TimeoutExpired:
-                print("Timeout while copying from/to remote directory.")
-                process.kill()
-            except Exception as exc:  # pylint: disable=broad-except
-                print("Error copying from/to remote directory\n", exc)
-                process.kill()
+        logger.info(f"Copying from '{frompath}' to '{topath}'...")
+        try:
+            if frompath.is_dir():
+                shutil.copytree(frompath, topath, dirs_exist_ok=True)
+            else:
+                shutil.copy(frompath, topath)
+        except OSError as e:
+            logger.error(f"Directory not copied because {frompath} "
+                         f"is not a directory. Error: %s" % e)
+        except FileNotFoundError as e:
+            logger.error(f"Error in copying from {frompath} to {topath}. "
+                         f"Error: %s" % e)
     
     except DiskSpaceExceeded as e:
-        print(f"Disk space limit exceeded: {str(e)}")    # logger.error
+        logger.error(f"Disk space limit exceeded: {str(e)}")
     
     log_disk_usage("Rclone process complete")
 
@@ -93,8 +112,8 @@ def unzip(zip_file: Union[Path, str]):
     # get the current amount of bytes stored in the data directory
     stored_bytes = get_disk_usage(cfg.DATA_PATH)
 
-    print(f"Data folder currently contains {round(stored_bytes / (1024 ** 3), 2)} GB.\n"
-          f"Now unpacking '{zip_file}'...")
+    logger.info(f"Data folder currently contains {round(stored_bytes / (1024 ** 3), 2)} GB.\n"
+                f"Now unpacking '{zip_file}'...")
 
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
         for file_info in zip_ref.infolist():
@@ -119,6 +138,7 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
     
     Raises:
         FileNotFoundError: If the necessary files don't exist after setup.
+        DiskSpaceExceeded: If available disk space was exceeded during setup.
     """
     log_disk_usage("Beginning setup")
     # get absolute limit by comparing to remaining available space on node
@@ -142,9 +162,11 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
         run_bash_subprocess(setup_cmd)
 
     except DiskSpaceExceeded as e:
-        print(f"Disk space limit exceeded: {str(e)}")   # logger.error
+        logger.error(f"Disk space limit exceeded: {str(e)}")
+        raise DiskSpaceExceeded(f"Setting up exceeds the maximum allowed disk space "
+                                f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder.")
 
-    if not all(e in os.listdir(str(data_path)) for e in ["masks", "train.txt", "test.txt"]):
+    if not set(os.listdir(data_path)) >= {"masks", "train.txt", "test.txt"}:
         raise FileNotFoundError(f"Data path '{data_path}' does not contain required entries after setup!")
 
     log_disk_usage("Setup complete")
@@ -179,9 +201,10 @@ def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
     Returns:
         available GB on node
     """
+    #todo: incorrect logic here (see function below on how to start correcting!)
     try:
         # get available space on entire node
-        available_gb = int(subprocess.getoutput("df -h | grep 'overlay' | awk '{print $4}'").split("G")[0])
+        available_gb = float(subprocess.getoutput("df -h | grep 'overlay' | awk '{print $4}'").split("G")[0])
     except ValueError as e:
         logger.info(f"ValueError: Node disk space not readable. Using provided limit of {limit_gb} GB.")
         available_gb = limit_gb
@@ -190,8 +213,40 @@ def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
         return limit_gb
     else:
         logger.warning(f"Available disk space on node ({available_gb} GB) is less than the user "
-                       f"defined limit ({limit_gb} GB). Limit will be reduced to {available_gb} GB.")
-        return available_gb
+                       f"defined limit ({limit_gb} GB). Limit will be reduced to {floor(available_gb)} GB.")
+        return floor(available_gb)
+
+
+# def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
+#     """
+#     Check overall data limit on node and redefine limit if necessary.
+
+#     Args:
+#         limit_gb: user defined disk space limit (in GB)
+    
+#     Returns:
+#         available GB on node
+#     """
+#     try:
+#         # get available space on entire node
+#         available_gb = float(subprocess.getoutput("df -h | grep 'overlay' | awk '{print $4}'").split("G")[0])
+#     except ValueError as e:
+#         logger.info(f"ValueError: Node disk space not readable. Using provided limit of {limit_gb} GB.")
+#         available_gb = limit_gb
+
+#     # get already used space from project (rounded up)
+#     used_gb = ceil(get_disk_usage() / (1024 ** 3))  #todo: make this work with different limit_gb inputs or ignore!!
+#     leftover_gb = limit_gb - used_gb
+
+#     if available_gb >= leftover_gb:
+#         return limit_gb
+#     else:
+#         # calculate new limit (which includes used space)
+#         reduced_limit_gb = available_gb + used_gb
+#         logger.warning(f"Available disk space on node ({available_gb} GB) is less than the user "
+#                        f"defined limit ({limit_gb} GB). Limit for entire project redefined as "
+#                        f" {reduced_limit_gb} GB (which includes the already used {used_gb} GB).")
+#         return reduced_limit_gb
 
 
 def get_disk_usage(folder: Path = cfg.BASE_PATH):
@@ -203,7 +258,7 @@ def get_disk_usage(folder: Path = cfg.BASE_PATH):
 def log_disk_usage(process_message: str):
     """Log used disk space to the terminal with a process_message describing what has occurred.
     """
-    print(f"{process_message}: Repository currently takes up {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
+    logger.debug(f"{process_message}: Repository currently takes up {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
 
 
 def run_bash_subprocess(cmd: list, timeout: int = 600):
@@ -215,7 +270,13 @@ def run_bash_subprocess(cmd: list, timeout: int = 600):
         cmd -- list of command line arguments for subprocess call
         timeout -- int. Timeout in seconds for the subprocess command
     """
-    print(f"Running subprocess command with arguments: '{cmd}'")    # logger.debug
+    logger.debug(f"Running subprocess command with arguments: '{cmd}'")
+
+    # check available physical devices (GPU or CPU)
+    if not list_physical_devices('GPU'):
+        timeout = timeout * 3
+        logger.warning(f"No GPU devices detected, running on CPU. "
+                       f"Extending timeout to {timeout} seconds.")
 
     try:
         process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
@@ -223,12 +284,14 @@ def run_bash_subprocess(cmd: list, timeout: int = 600):
 
         # check the return code to terminate in case the bash script was forcefully exited
         if return_code == 0:
-            print("Bash script executed successfully.")
+            logger.info("Bash script executed successfully.")
         else:
-            print(f"Error during execution of bash script '{cmd[1]}'. "
-                  f"Terminated with return code {return_code}.")
             process.terminate()
+            raise SubprocessError(
+                f"Error during execution of bash script '{cmd[1]}'. "
+                f"Terminated with return code {return_code}.")
 
-    except subprocess.TimeoutExpired:
-        print(f"Timeout during execution of bash script '{cmd[1]}'.")
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"Timeout during execution of bash script '{cmd[1]}'.")
         process.terminate()
+        raise SubprocessError(f"Timeout during execution of bash script '{cmd[1]}'.")
