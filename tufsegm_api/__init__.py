@@ -92,11 +92,7 @@ def train(**kwargs):
     zip_paths = list(data_path.rglob("*.zip"))
     if zip_paths:
         logger.info(f"Extracting data from {len(zip_paths)} .zip files...")
-        for zip_path in zip_paths:
-            unzip(zip_file=zip_path)
-        
-            logger.info("Cleaning up zip file...")
-            zip_path.unlink()
+        unzip(zip_paths)
 
     # prepare data if not yet done
     if not data_entries >= {"masks", "train.txt", "test.txt"}:

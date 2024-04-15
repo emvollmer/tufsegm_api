@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
 
 
+PROJ_LIM_OPTIONS = {
+    "BASE": {"LIMIT": cfg.LIMIT_GB, "PATH": cfg.BASE_PATH},
+    "DATA": {"LIMIT": cfg.DATA_LIMIT_GB, "PATH": cfg.DATA_PATH}
+}
+
+
 class DiskSpaceExceeded(Exception):
     """Raised when disk space is exceeded."""
     pass
@@ -65,63 +71,107 @@ def copy_remote(frompath, topath):
     """
     frompath: Path = Path(frompath)
     topath: Path = Path(topath)
+    topath_contents = set(topath.iterdir())
 
-    log_disk_usage("Begin copying from NextCloud")
-    limit_gb = check_node_disk_limit()  # get absolute limit by comparing with available node space
+    log_disk_usage(f"Begin copying from '{frompath}' to '{topath}'...")
+    # get absolute limit by comparing with available node space
+    limit_gb = check_available_space()
+    limit_bytes = floor(limit_gb * (1024 ** 3))    # convert to bytes
 
     try:
-        # monitor disk space usage in the background
-        monitor_thread = threading.Thread(target=monitor_disk_space, 
-                                          args=(limit_gb,), daemon=True)
-        monitor_thread.start()
+        if frompath.is_dir():
 
-        logger.info(f"Copying from '{frompath}' to '{topath}'...")
-        try:
-            if frompath.is_dir():
-                shutil.copytree(frompath, topath, dirs_exist_ok=True)
-            else:
-                shutil.copy(frompath, topath)
-        except OSError as e:
-            logger.error(f"Directory not copied because {frompath} "
-                         f"is not a directory. Error: %s" % e)
-        except FileNotFoundError as e:
-            logger.error(f"Error in copying from {frompath} to {topath}. "
-                         f"Error: %s" % e)
-    
+            for f in sorted(frompath.rglob("[!.]*")):
+
+                if f.is_dir():
+                    topath_folder = Path(topath, f.relative_to(frompath))
+                    topath_folder.mkdir(parents=True, exist_ok=True)
+
+                elif f.is_file():
+                    file_size = f.stat().st_size
+                    if get_disk_usage() + file_size >= limit_bytes:
+                        raise DiskSpaceExceeded(
+                            f"Copying file will exceed the disk space limit "
+                            f"of {limit_gb} GB for '{cfg.BASE_PATH}' folder.")
+                    shutil.copy(f, Path(topath, f.relative_to(frompath).parent))
+                    log_disk_usage(f"Copied '{f}'")
+                
+                else:
+                    raise FileNotFoundError
+
+        elif frompath.is_file():
+
+            file_size = f.stat().st_size
+            if get_disk_usage() + file_size >= limit_bytes:
+                raise DiskSpaceExceeded(
+                    f"Copying file will exceed the disk space limit "
+                    f"of {limit_gb} GB for '{cfg.BASE_PATH}' folder.")
+            shutil.copy(frompath, topath)
+        
+        else:
+            raise OSError
+
+    except (OSError, FileNotFoundError) as e:
+        logger.error(f"Error in copying from '{frompath}' to '{topath}'. "
+                     f"Error: %s" % e)
+        raise
+
     except DiskSpaceExceeded as e:
-        logger.error(f"Disk space limit exceeded: {str(e)}")
-    
-    log_disk_usage("Rclone process complete")
+        logger.error(f"Disk space limit almost exceeded: {str(e)}.")
+        
+        delete_new_contents(topath_contents, set(topath.iterdir()))
+
+        raise DiskSpaceExceeded(
+            f"You will need to free up some space on the node to download"
+            f" all the data or work in remote (/storage/) directories!")
+
+    log_disk_usage("Copying complete")
 
 
-def unzip(zip_file: Union[Path, str]):
+def delete_new_contents(original_contents: set, current_contents: set):
+    """Deletes newly copied files and folders
+
+    Args:
+        original_contents (set): Set of existing files/folder paths before copying
+        current_contents (set): Set of files/folder paths after copying
+    """
+    new_contents = current_contents - original_contents
+    logger.info(f"Deleting newly downloaded files/folders: {len(new_contents)}")
+
+    for item in new_contents:
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
+
+
+def unzip(zip_paths: list):
     """
     Unzipping files while staying below the deployment space limit.
 
     Args:
-        zip_file: pathlib.Path or str .zip file to extract
+        zip_paths (list): .zip files to extract
 
     Raises:
         DiskSpaceExceeded: If available disk space was exceeded during unzipping.
     """
-    log_disk_usage("Beginning unzipping")
-    # get limit by comparing to remaining available space on node
-    limit_gb = check_node_disk_limit(cfg.DATA_LIMIT_GB)
-    limit_bytes = limit_gb * (1024 ** 3)    # convert to bytes
+    log_disk_usage(f"Begin unzipping {len(zip_paths)} .zip files...")
 
-    # get the current amount of bytes stored in the data directory
-    stored_bytes = get_disk_usage(cfg.DATA_PATH)
+    limit_gb = check_available_space(PROJ_LIM_OPTIONS["DATA"])   # get absolute limit
+    limit_bytes = floor(limit_gb * (1024 ** 3))   # convert to bytes
 
-    logger.info(f"Data folder currently contains {round(stored_bytes / (1024 ** 3), 2)} GB.\n"
-                f"Now unpacking '{zip_file}'...")
+    for zip_path in zip_paths:
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            for file_info in zip_ref.infolist():
+                if get_disk_usage(cfg.DATA_PATH) + file_info.file_size >= limit_bytes:
+                    raise DiskSpaceExceeded(f"Unzipping will exceed the maximum allowed disk space "
+                                            f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder.")
+            # unzip the file to its current directory
+            zip_ref.extractall(zip_file.parent)
 
-    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
-        for file_info in zip_ref.infolist():
-            if stored_bytes + file_info.file_size >= limit_bytes:
-                raise DiskSpaceExceeded(f"Unzipping will exceed the maximum allowed disk space "
-                                        f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder.")
-        # unzip the file to its current directory
-        zip_ref.extractall(zip_file.parent)
+        logger.info("Cleaning up zip file...")
+        zip_path.unlink()
+        log_disk_usage(f"Unzipped '{zip_path}'")
     
     log_disk_usage("Unzipping complete")
 
@@ -141,8 +191,8 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
         DiskSpaceExceeded: If available disk space was exceeded during setup.
     """
     log_disk_usage("Beginning setup")
-    # get absolute limit by comparing to remaining available space on node
-    limit_gb = check_node_disk_limit(cfg.DATA_LIMIT_GB)
+
+    limit_gb = check_available_space(PROJ_LIM_OPTIONS["DATA"])
 
     try:
         # monitor disk space usage in the background
@@ -172,81 +222,78 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
     log_disk_usage("Setup complete")
 
 
-def monitor_disk_space(limit_gb: int = cfg.LIMIT_GB):
+def monitor_disk_space(limit_gb):
     """
     Thread function to monitor disk space and check the current usage doesn't exceed 
-    the defined limit.
+    the available disk space limit.
+
+    Arguments:
+        limit_gb (int): identified available disk space (in GB)
 
     Raises:
         DiskSpaceExceeded: If available disk space was exceeded during threading.
     """
     limit_bytes = limit_gb * (1024 ** 3)  # convert to bytes
-    while True:
-        time.sleep(10)
+    try:
+        while True:
+            time.sleep(5)
 
-        stored_bytes = get_disk_usage()
+            stored_bytes = get_disk_usage()
 
-        if stored_bytes >= limit_bytes:
-            raise DiskSpaceExceeded(f"Exceeded maximum allowed disk space of {limit_gb} GB "
-                                    f"for '{cfg.BASE_PATH}' folder.")
+            if stored_bytes >= limit_bytes:
+                disk_space_exceeded_event.set()
+                raise DiskSpaceExceeded(
+                    f"Exceeded maximum allowed disk space of {limit_gb} GB "
+                    f"for '{cfg.BASE_PATH}' (or a subfolder)."
+                )
+            else:
+                leftover_gb = round((limit_bytes - stored_bytes) / (1024 ** 3), 2)
+                logger.info(f"Leftover disk space: {leftover_gb} GB")
+
+    except DiskSpaceExceeded as e:
+        logger.error(f"Child thread terminating due to: {str(e)}")
+        raise DiskSpaceExceeded
 
 
-def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
+def check_available_space(proj_lim_option: dict = PROJ_LIM_OPTIONS["BASE"]):
     """
     Check overall data limit on node and redefine limit if necessary.
 
     Args:
-        limit_gb: user defined disk space limit (in GB)
+        proj_lim_option (dict): {"LIMIT": int, "PATH": pathlib.Path}
     
     Returns:
         available GB on node
     """
-    #todo: incorrect logic here (see function below on how to start correcting!)
+    project_limit_gb = proj_lim_option["LIMIT"]
+    # get used project space and theoretically remaining available space for project
+    project_used_gb = round(get_disk_usage(proj_lim_option["PATH"]) / (1024 ** 3), 2)
+    project_available_gb = round(project_limit_gb - project_used_gb, 2)
+
     try:
         # get available space on entire node
-        available_gb = float(subprocess.getoutput("df -h | grep 'overlay' | awk '{print $4}'").split("G")[0])
+        node_available_gb = float(subprocess.getoutput("df -h | grep 'overlay' | awk '{print $4}'").split("G")[0])
     except ValueError as e:
         logger.info(f"ValueError: Node disk space not readable. Using provided limit of {limit_gb} GB.")
-        available_gb = limit_gb
-
-    if available_gb >= limit_gb:
-        return limit_gb
-    else:
-        logger.warning(f"Available disk space on node ({available_gb} GB) is less than the user "
-                       f"defined limit ({limit_gb} GB). Limit will be reduced to {floor(available_gb)} GB.")
-        return floor(available_gb)
-
-
-# def check_node_disk_limit(limit_gb: int = cfg.LIMIT_GB):
-#     """
-#     Check overall data limit on node and redefine limit if necessary.
-
-#     Args:
-#         limit_gb: user defined disk space limit (in GB)
+        node_available_gb = project_limit_gb
     
-#     Returns:
-#         available GB on node
-#     """
-#     try:
-#         # get available space on entire node
-#         available_gb = float(subprocess.getoutput("df -h | grep 'overlay' | awk '{print $4}'").split("G")[0])
-#     except ValueError as e:
-#         logger.info(f"ValueError: Node disk space not readable. Using provided limit of {limit_gb} GB.")
-#         available_gb = limit_gb
+    # redefine available project space (with a safety margin)
+    safety = 2
+    if node_available_gb <= safety:
+        raise DiskSpaceExceeded(
+            f"Available node disk space ({node_available_gb} GB) below safety margin."
+        )
 
-#     # get already used space from project (rounded up)
-#     used_gb = ceil(get_disk_usage() / (1024 ** 3))  #todo: make this work with different limit_gb inputs or ignore!!
-#     leftover_gb = limit_gb - used_gb
+    if node_available_gb - safety <= project_available_gb:
+        logger.warning(f"Available node disk space ({node_available_gb} GB) is less than the theoretically "
+                       f"remaining reserved project space ({project_available_gb} GB). Limit will be "
+                       f"reduced from {project_limit_gb} GB to {project_used_gb + node_available_gb} GB "
+                       f"minus a safety margin of {safety} GB.")
+        project_available_gb = node_available_gb - safety
 
-#     if available_gb >= leftover_gb:
-#         return limit_gb
-#     else:
-#         # calculate new limit (which includes used space)
-#         reduced_limit_gb = available_gb + used_gb
-#         logger.warning(f"Available disk space on node ({available_gb} GB) is less than the user "
-#                        f"defined limit ({limit_gb} GB). Limit for entire project redefined as "
-#                        f" {reduced_limit_gb} GB (which includes the already used {used_gb} GB).")
-#         return reduced_limit_gb
+    limit_gb = project_used_gb + project_available_gb
+    logger.info(f"Absolute project limit is {round(limit_gb, 2)} GB.")
+    return limit_gb
 
 
 def get_disk_usage(folder: Path = cfg.BASE_PATH):
@@ -258,7 +305,7 @@ def get_disk_usage(folder: Path = cfg.BASE_PATH):
 def log_disk_usage(process_message: str):
     """Log used disk space to the terminal with a process_message describing what has occurred.
     """
-    logger.debug(f"{process_message}: Repository currently takes up {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
+    logger.info(f"{process_message}: Repository currently takes up {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
 
 
 def run_bash_subprocess(cmd: list, timeout: int = 600):
