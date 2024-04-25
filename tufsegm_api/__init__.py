@@ -103,7 +103,9 @@ def train(**kwargs):
         )
 
     # train model
-    kwargs['cfg_options'] = {'epochs': kwargs['epochs'],
+    kwargs['cfg_options'] = {'backbone': kwargs['backbone'],
+                             'encoded_weights': kwargs['weights'],
+                             'epochs': kwargs['epochs'],
                              'batch_size': kwargs['batch_size'],
                              'lr': kwargs['lr'],
                              'seed': kwargs['seed'],

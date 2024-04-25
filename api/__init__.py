@@ -102,10 +102,11 @@ def train(**options):
 
 if __name__ == "__main__":
     metadata = get_metadata()
-    print(f"Metadata:\n{metadata}")
 
     # train_args = {
     #     # 'model_type': 'UNet',
+    #     'backbone': 'resnet152',
+    #     'encoded_weights': 'imagenet',
     #     'dataset_path': None,
     #     'save_for_viewing': False,
     #     'test_size': 0.2,

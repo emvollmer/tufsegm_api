@@ -104,6 +104,22 @@ class TrainArgsSchema(marshmallow.Schema):
     #     load_default="UNet",
     # )
 
+    backbone = fields.String(
+        metadata={
+            "description": "Model backbone to use. Default is 'resnet152'.",
+        },
+        validate=validate.OneOf(['resnet152', 'mobilenetv2']),
+        load_default="resnet152",
+    )
+
+    weights = fields.String(
+        metadata={
+            "description": "Encoder weights to load (pretrained or not). Default is 'imagenet'.",
+        },
+        validate=validate.OneOf(['imagenet', 'None']),
+        load_default="imagenet",
+    )
+
     dataset_path = fields.String(
         metadata={
             "description": "Path to the dataset. If none is provided, "
