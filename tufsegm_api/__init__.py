@@ -13,7 +13,10 @@ import os
 
 import tufsegm_api.config as cfg
 
-from tufsegm_api.utils import copy_remote, unzip, setup, run_bash_subprocess, configure_api_logging
+from tufsegm_api.utils import (
+    copy_remote, unzip, setup, run_bash_subprocess, 
+    configure_api_logging, mlflow_logging
+)
 
 from ThermUrbanFeatSegm.scripts.segm_models.infer_UNet import main as predict_func
 
@@ -128,9 +131,15 @@ def train(**kwargs):
     run_bash_subprocess(train_cmd)
     logger.info(f"Training and evaluation completed.")
 
-    # return training results, if the correct model folder exists and had a usable eval
+    # log model (if desired) and return training results
     try:
         model_path = sorted(cfg.MODELS_PATH.glob("[!.]*"))[-1]
+
+        # track model with mlflow if user provided information
+        if kwargs['mlflow_username']:
+            logger.info("Beginning MLFLow experiment logging...")
+            mlflow_logging(model_root=Path(model_path))
+            logger.info("Completed MLFLow experiment logging.")
 
         model_time = datetime.strptime(model_path.name, "%Y-%m-%d_%H-%M-%S")
         if creation_time - model_time <= timedelta(minutes=1):
@@ -139,7 +148,7 @@ def train(**kwargs):
                 train_result = json.load(f)
                 return train_result
         else:
-            raise ResultError(f'error during training, no model folder similar to '
+            raise ResultError(f'Error during training, no model folder similar to '
                               f'{creation_time.strftime("%Y-%m-%d_%H-%M-%S")} exists.')
     except IndexError as e:
         raise ResultError(f'Error during training, no model folders exist at {cfg.MODELS_PATH}. ', e)

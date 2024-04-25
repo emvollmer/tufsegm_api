@@ -139,6 +139,8 @@ pip3 install -e ./$submod_name
 echo "Installing $api_name repository as editable..."
 pip3 install -e .
 
+pip3 install -r requirements-mlflow.txt
+
 deactivate
 
 echo "================================================================"

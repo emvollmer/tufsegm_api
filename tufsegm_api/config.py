@@ -56,3 +56,7 @@ else:
 # Data limits on node to uphold
 LIMIT_GB = int(os.getenv("LIMIT_GB", default="20"))
 DATA_LIMIT_GB = int(os.getenv("DATA_LIMIT_GB", default="15"))
+
+# Remote MLFlow server
+MLFLOW_REMOTE_SERVER="https://mlflow.cloud.ai4eosc.eu/"
+MLFLOW_EXPERIMENT_NAME=SUBMODULE_NAME

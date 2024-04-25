@@ -96,6 +96,15 @@ class TrainArgsSchema(marshmallow.Schema):
     class Meta:  # Keep order of the parameters as they are defined.
         ordered = True
 
+    mlflow_username = fields.String(
+        metadata={
+            "description": "MLFlow username for experiment tracking "
+                           "(password will be requested via terminal). "
+                           "Leave blank if you don't want to use MLFlow.",
+        },
+        load_default=None,
+    )
+
     # model_type = fields.String(
     #     metadata={
     #         "description": "Segmentation model type.",

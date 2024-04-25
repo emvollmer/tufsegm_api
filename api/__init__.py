@@ -1,4 +1,4 @@
-"""Endpoint functions to integrate your model with the DEEPaaS API.
+"""Endpoint functions to integrate the submodule TUFSeg with the DEEPaaS API.
 
 For more information about how to edit the module see, take a look at the
 docs [1] and at a canonical exemplar module [2].
@@ -6,7 +6,9 @@ docs [1] and at a canonical exemplar module [2].
 [1]: https://docs.ai4eosc.eu/
 [2]: https://github.com/deephdc/demo_app
 """
+import getpass
 import logging
+import os
 from pathlib import Path
 import numpy as np
 
@@ -89,6 +91,19 @@ def train(**options):
     Returns:
         Parsed history/summary of the training process.
     """
+    # MLFlow experiment tracking requires setting environment variables 
+    # and getting/injecting necessary credentials
+    if options['mlflow_username']:
+        MLFLOW_TRACKING_USERNAME = options['mlflow_username']
+        logger.info(
+            f"MLFlow model experiment tracking via account.\nUsername: {MLFLOW_TRACKING_USERNAME}"
+        )
+        MLFLOW_TRACKING_PASSWORD =  getpass.getpass()  # inject password by typing manually
+
+        os.environ['MLFLOW_TRACKING_USERNAME'] = MLFLOW_TRACKING_USERNAME
+        os.environ['MLFLOW_TRACKING_PASSWORD'] = MLFLOW_TRACKING_PASSWORD
+        os.environ['LOGNAME'] = MLFLOW_TRACKING_USERNAME
+
     try:
         for k, v in options.items():
             logger.info(f"POST 'train' argument - {k}:\t{v}")
@@ -96,7 +111,7 @@ def train(**options):
         logger.info(f"POST 'train' result: {result}")
         return result
     except Exception as err:
-        logger.error("Error while running 'POST' predict: %s", err, exc_info=True)
+        logger.error("Error while running 'POST' train: %s", err, exc_info=True)
         raise  # Reraise the exception after log
 
 
@@ -104,6 +119,7 @@ if __name__ == "__main__":
     metadata = get_metadata()
 
     # train_args = {
+    #     'mlflow_username': None
     #     # 'model_type': 'UNet',
     #     'backbone': 'resnet152',
     #     'encoded_weights': 'imagenet',

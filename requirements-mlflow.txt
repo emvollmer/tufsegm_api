@@ -1,0 +1,5 @@
+# tensorflow is a prerequisite for MLFlow
+mlflow[extras]
+requests
+mlflow-export-import
+optuna # hyperparameter optimization

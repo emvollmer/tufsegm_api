@@ -3,21 +3,27 @@
 This module is used to define all the functions needed to
 operate the methods defined at `__init__.py`.
 """
+import json
 import logging
 from math import floor
+import mlflow
+import mlflow.tensorflow
 import os
+from pandas.io.json._normalize import nested_to_record
 from pathlib import Path
 import signal
 import shutil
 import subprocess
 from subprocess import TimeoutExpired
-from tensorflow.config.experimental import list_physical_devices
+import tensorflow as tf
 import time
 import threading
 from typing import Union
 import zipfile
 
 import tufsegm_api.config as cfg
+from ThermUrbanFeatSegm.scripts.segm_models._utils import ModelLoader
+from ThermUrbanFeatSegm.scripts.configuration import read_conf
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
@@ -52,7 +58,7 @@ def configure_api_logging(logger, log_level: int):
     console_handler.setLevel(log_level)
     console_handler.setFormatter(log_format)
     logger.addHandler(console_handler)
-    logger.setLevel(log_level)
+    #logger.setLevel(log_level)
 
 
 def copy_remote(frompath, topath):
@@ -222,6 +228,114 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
     log_disk_usage("Setup complete")
 
 
+def run_bash_subprocess(cmd: list, timeout: int = 1000):
+    """
+    Run bash script call via subprocess command
+    while printing all outputs to the terminal
+
+    Args:
+        cmd -- list of command line arguments for subprocess call
+        timeout -- int. Timeout in seconds for the subprocess command
+    """
+    logger.debug(f"Running subprocess command with arguments: '{cmd}'")
+
+    # check available physical devices (GPU or CPU)
+    if not tf.config.experimental.list_physical_devices('GPU'):
+        timeout = timeout * 3
+        logger.warning(f"No GPU devices detected, running on CPU. "
+                       f"Extending timeout to {timeout} seconds.")
+
+    try:
+        process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
+        return_code = process.wait(timeout=timeout)
+
+        # check the return code to terminate in case the bash script was forcefully exited
+        if return_code == 0:
+            logger.info("Bash script executed successfully.")
+        else:
+            process.terminate()
+            raise SubprocessError(
+                f"Error during execution of bash script '{cmd[1]}'. "
+                f"Terminated with return code {return_code}.")
+
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"Timeout during execution of bash script '{cmd[1]}'.")
+        process.terminate()
+        raise SubprocessError(f"Timeout during execution of bash script '{cmd[1]}'.")
+
+
+def mlflow_logging(model_root: Path):
+    """
+    Logging model experiment to MLFlow server.
+    
+    Args:
+        model_root (Path) -- Path to model folder
+    """
+    # set the MLflow server and backend and artifact stores
+    mlflow.set_tracking_uri(cfg.MLFLOW_REMOTE_SERVER)
+
+    # set the experiment name for all different runs
+    mlflow.set_experiment(cfg.MLFLOW_EXPERIMENT_NAME)
+
+    model_config_path = Path(model_root, "run_config.json")
+    model_config = read_conf(model_config_path)
+    model_params = {
+        **model_config['model'], 
+        'classes': model_config['data']['masks']['labels'],
+        **model_config['data']['loader'],
+        **model_config['train']
+    }
+
+    model_loader = ModelLoader(model_config, model_root)
+    model = model_loader.model
+
+    with open(Path(model_root, "eval.json"), "r") as f:
+        model_metrics = json.load(f)
+        model_metrics = {
+            **model_metrics['sklearn metrics - combined imagewise results'], 
+            **model_metrics['sklearn metrics - combined imagewise classwise results']
+        }
+        model_metrics_flat = nested_to_record(model_metrics, sep=' ')
+        model_metrics_flat = {k.replace('(', '- ').replace(')', ''): v for k, v in model_metrics_flat.items()}
+
+    with mlflow.start_run(run_name=Path(model_root).name):
+        mlflow.tensorflow.log_model(model, artifact_path='artifacts')
+        mlflow.log_params(model_params)
+        logger.info("MLFlow - logged training parameters.")
+        mlflow.log_metrics(model_metrics_flat)
+        logger.info("MLFlow - logged evaluation metrics.")
+
+    return
+
+
+# todo: correct errors in mlflow logging so that model can be loaded
+def load_mlflow_model(model_root: Path):
+    """CURRENTLY NOT YET POSSIBLE, MODEL CAN'T BE LOADED FROM MLFLOW..."""
+    exp = mlflow.get_experiment_by_name(cfg.MLFLOW_EXPERIMENT_NAME)
+
+    latest_run = mlflow.search_runs(
+        experiment_ids=exp.experiment_id,
+        order_by=["start_time DESC"],
+        max_results=1
+    )
+    latest_run_id = latest_run.run_id[0]
+    run_info = mlflow.get_run(latest_run_id)
+    model_uri = f'runs:/{latest_run_id}/artifacts'
+
+    model_info = mlflow.models.get_model_info(model_uri)
+
+    model = mlflow.pyfunc.load_model(model_uri)
+    # -> This returns a ValueError
+    # Unable to restore custom object of type _tf_keras_metric. Please make
+    # sure that any custom layers are included in the `custom_objects` arg when calling 
+    # `load_model()` and make sure that all layers implement `get_config` and `from_config`.
+
+
+# ###################################
+# HELPER FUNCTIONS FOR UTIL FUNCTIONS
+# ###################################
+
+
 def monitor_disk_space(limit_gb):
     """
     Thread function to monitor disk space and check the current usage doesn't exceed 
@@ -306,39 +420,3 @@ def log_disk_usage(process_message: str):
     """Log used disk space to the terminal with a process_message describing what has occurred.
     """
     logger.info(f"{process_message}: Repository currently takes up {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
-
-
-def run_bash_subprocess(cmd: list, timeout: int = 600):
-    """
-    Run bash script call via subprocess command
-    while printing all outputs to the terminal
-
-    Args:
-        cmd -- list of command line arguments for subprocess call
-        timeout -- int. Timeout in seconds for the subprocess command
-    """
-    logger.debug(f"Running subprocess command with arguments: '{cmd}'")
-
-    # check available physical devices (GPU or CPU)
-    if not list_physical_devices('GPU'):
-        timeout = timeout * 3
-        logger.warning(f"No GPU devices detected, running on CPU. "
-                       f"Extending timeout to {timeout} seconds.")
-
-    try:
-        process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
-        return_code = process.wait(timeout=timeout)
-
-        # check the return code to terminate in case the bash script was forcefully exited
-        if return_code == 0:
-            logger.info("Bash script executed successfully.")
-        else:
-            process.terminate()
-            raise SubprocessError(
-                f"Error during execution of bash script '{cmd[1]}'. "
-                f"Terminated with return code {return_code}.")
-
-    except subprocess.TimeoutExpired as e:
-        logger.error(f"Timeout during execution of bash script '{cmd[1]}'.")
-        process.terminate()
-        raise SubprocessError(f"Timeout during execution of bash script '{cmd[1]}'.")
