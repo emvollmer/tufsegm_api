@@ -113,6 +113,7 @@ def train(**kwargs):
     cfg_options_str = ' '.join([f"{key}={value}" for key, value in kwargs['cfg_options'].items()])
     
     train_cmd = ["/bin/bash", str(Path(cfg.SUBMODULE_PATH, 'scripts', 'segm_models', 'train.sh')),
+                 "-src", str(data_path),
                  "-dst", str(cfg.MODELS_PATH),
                  "--channels", str(kwargs['channels']),
                  "--processing", str(kwargs['processing']),
