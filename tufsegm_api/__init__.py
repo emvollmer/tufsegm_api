@@ -33,7 +33,7 @@ def predict(**kwargs):
     """Main/public method to perform prediction
     --- WITHOUT COPYING DATA OR MODELS (WORKING IN NEXTCLOUD IF THAT'S WHERE THE DATA/MODEL IS)
     """
-    model_path = Path(kwargs['model_name'])
+    model_path = Path(kwargs['model_dir'])
     logger.debug(f"Predicting with model: {model_path}")
 
     # if input_file is a remote file ('/storage/'), work remotely
