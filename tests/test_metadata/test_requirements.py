@@ -18,6 +18,8 @@ the same folder. However, remember to add the prefix `test_` to the file.
 # pylint: disable=redefined-outer-name
 # pylint: disable=unused-argument
 
+from pathlib import Path
+
 
 def test_authors(metadata):
     """Tests that metadata provides authors information."""
@@ -26,9 +28,9 @@ def test_authors(metadata):
 
 
 def test_emails(metadata):
-    """Tests that metadata provides authors information."""
+    """Tests that metadata provides email information."""
     assert "author-email" in metadata
-    assert metadata["Author-email"] == {
+    assert metadata["author-email"] == {
         "Elena Vollmer": "elena.vollmer@kit.edu"
     }
 
@@ -36,13 +38,13 @@ def test_emails(metadata):
 def test_description(metadata):
     """Tests that metadata provides description information."""
     assert "description" in metadata
-    assert metadata["Description"] == "Deepaas API for thermal urban feature semantic segmentation model repo"
+    assert metadata["description"] == "Deepaas API for thermal urban feature semantic segmentation model repo"
 
 
 def test_license(metadata):
     """Tests that metadata provides license information."""
     assert "license" in metadata
-    assert metadata["License"] == "BSD-3-Clause"
+    assert metadata["license"] == "BSD-3-Clause"
 
 
 def test_version(metadata):
@@ -51,6 +53,36 @@ def test_version(metadata):
     assert isinstance(metadata["version"], str)
     assert all(v.isnumeric() for v in metadata["version"].split("."))
     assert len(metadata["version"].split(".")) == 3
+
+
+def test_datasets_local(metadata):
+    """Tests that metadata provides local dataset directories."""
+    assert "datasets_local" in metadata
+    assert isinstance(metadata["datasets_local"], list), "'datasets_local' isn't a list."
+    assert all(isinstance(v, str) for v in metadata["datasets_local"]), "Not all elements in 'datasets_local' are strings."
+    assert all(Path(v).is_dir() for v in metadata["datasets_local"]), "Not all elements in 'datasets_local' are valid directories."
+
+
+def test_datasets_remote(metadata):
+    """Tests that metadata provides remote dataset directories."""
+    # Is this allowed? Accessing remote NextCloud in tests?
+    assert "datasets_remote" in metadata
+    assert isinstance(metadata["datasets_remote"], list), "'datasets_remote' isn't a list."
+    assert all(isinstance(v, str) for v in metadata["datasets_remote"]), "Not all elements in 'datasets_remote' are strings."
+    assert all(Path(v).is_dir() for v in metadata["datasets_remote"]), "Not all elements in 'datasets_remote' are valid directories."
+
+
+def test_models(metadata):
+    """Tests that metadata provides model directories."""
+    assert "models_local" in metadata
+    assert isinstance(metadata["models_local"], list), "'models_local' isn't a list."
+    assert all(isinstance(v, str) for v in metadata["models_local"]), "Not all elements in 'models_local' are strings."
+    assert all(Path(v).is_dir() for v in metadata["models_local"]), "Not all elements in 'models_local' are valid directories."
+    # Is this allowed? Accessing remote NextCloud in tests?
+    assert "models_remote" in metadata
+    assert isinstance(metadata["models_remote"], list), "'models_remote' isn't a list."
+    assert all(isinstance(v, str) for v in metadata["models_remote"]), "Not all elements in 'models_remote' are strings."
+    assert all(Path(v).is_dir() for v in metadata["models_remote"]), "Not all elements in 'models_remote' are valid directories."
 
 
 # def test_models(metadata):

@@ -44,16 +44,22 @@ from deepaas.model.v2.wrapper import UploadedFile
 import api
 
 
-@pytest.fixture(scope="module", params=["t100-images.npy"])
+@pytest.fixture(scope="module", params=["2024-04-24_17-57-17"])
+def model_dir(request):
+    """Fixture to provide the model_name argument to api.predict."""
+    return f"{api.config.MODELS_PATH}/{request.param}"
+
+
+@pytest.fixture(scope="module", params=["images/MU_15/DJI_0_0001_R.npy"])
 def input_file(request):
     """Fixture to provide the input_file argument to api.predict."""
-    filepath = f"{api.config.DATA_PATH}/external"
-    return UploadedFile("", filename=f"{filepath}/{request.param}")
+    return request.param
+    #return UploadedFile("", filename=f"{filepath}/{request.param}")
 
 
-@pytest.fixture(scope="module", params=["test_simplemodel"])
-def model_name(request):
-    """Fixture to provide the model_name argument to api.predict."""
+@pytest.fixture(scope="module", params=[False])
+def display(request):
+    """Fixture to provide the display argument to api.predict."""
     return request.param
 
 

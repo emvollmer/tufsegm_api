@@ -24,7 +24,7 @@ def tests_datapath():
 
 @pytest.fixture(scope="session", autouse=True)
 def tests_modelspath():
-    """Fixture to generate a original directory path for datasets."""
+    """Fixture to generate a original directory path for models."""
     return pathlib.Path(api.config.MODELS_PATH).absolute()
 
 
@@ -56,13 +56,13 @@ def copytree_models(tmptestsdir, tests_modelspath):
 
 
 def generate_signature(names, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD):
-    """Function to generate dynamically signatures."""
+    """Function to generate signatures dynamically."""
     parameters = [inspect.Parameter(name, kind) for name in names]
     return inspect.Signature(parameters=parameters)
 
 
 def generate_fields_fixture(signature):
-    """Function to generate dynamically fixtures with dynamic arguments."""
+    """Function to generate fixtures dynamically with dynamic arguments."""
     def fixture_function(**options):  # fmt: skip
         return {k: v for k, v in options.items() if v is not None}
     fixture_function.__signature__ = signature

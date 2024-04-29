@@ -43,21 +43,82 @@ import pytest
 import api
 
 
-@pytest.fixture(scope="module", params=["t100-dataset.npz"])
-def input_file(request):
-    """Fixture to provide the dataset argument to api.train."""
-    return f"{api.config.DATA_PATH}/{request.param}"
-
-
-@pytest.fixture(scope="module", params=["test_simplemodel"])
-def model_name(request):
-    """Fixture to provide the model_name argument to api.train."""
+# todo: params=[None] causes KeyError because it doesn't make mlflow_username a proper parameter
+@pytest.fixture(scope="module", params=[None])
+def mlflow_username(request):
+    """Fixture to provide the mlflow_username argument to api.train."""
     return request.param
 
 
-@pytest.fixture(scope="module", params=[2])
+@pytest.fixture(scope="module", params=["mobilenetv2"])
+def backbone(request):
+    """Fixture to provide the backbone argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=["None"])
+def weights(request):
+    """Fixture to provide the weights argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module")
+def dataset_path(request):
+    """Fixture to provide the dataset_path argument to api.train."""
+    return api.config.DATA_PATH
+
+
+@pytest.fixture(scope="module", params=[False])
+def save_for_viewing(request):
+    """Fixture to provide the save_for_viewing argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[0.2])
+def test_size(request):
+    """Fixture to provide the test_size argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[4])
+def channels(request):
+    """Fixture to provide the channels argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=["basic"])
+def processing(request):
+    """Fixture to provide the processing argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=["160x128"])
+def img_size(request):
+    """Fixture to provide the img_size argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[1])
 def epochs(request):
-    """Fixture to provide the epochs option to api.train."""
+    """Fixture to provide the epochs argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[1])
+def batch_size(request):
+    """Fixture to provide the batch_size argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[0.001])
+def lr(request):
+    """Fixture to provide the lr argument to api.train."""
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[42])
+def seed(request):
+    """Fixture to provide the seed argument to api.train."""
     return request.param
 
 
