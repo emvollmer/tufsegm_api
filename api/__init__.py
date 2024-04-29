@@ -139,7 +139,7 @@ if __name__ == "__main__":
     # )
 
     pred_args = {
-        'model_name': '/storage/tufsegm/models/2023-09-21_11-42-18',
+        'model_dir': '/storage/tufsegm/models/2023-09-21_11-42-18',
         'input_file': '/storage/tugsegm/additional_data/images_for_predict/MU_09/DJI_0_0001_R.npy',
         'display': False,
         #'save': True,

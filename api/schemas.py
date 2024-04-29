@@ -52,7 +52,7 @@ class PredArgsSchema(marshmallow.Schema):
     class Meta:  # Keep order of the parameters as they are defined.
         ordered = True
 
-    model_name = fields.String(
+    model_dir = fields.String(
         metadata={
             "description": "Model to be used for prediction. If a remote folder (/storage/)"
                            "is selected, prediction results will be saved there."
