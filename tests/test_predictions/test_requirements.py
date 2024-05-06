@@ -17,11 +17,22 @@ the same folder. However, remember to add the prefix `test_` to the file.
 """
 # pylint: disable=redefined-outer-name
 # pylint: disable=unused-argument
+from pathlib import Path
 
 
 def test_predictions_type(predictions):
     """Tests that predictions is dict type."""
     assert isinstance(predictions, dict)
+
+
+def test_predictions_outputs(predictions, model_dir, input_file):
+    """Tests that predictions outputs saved files."""
+    # todo: Try out if this test function works
+
+    prediction_path = Path(model_dir, "predictions")
+    assert Path(prediction_path).is_dir(), "Path to predictions does not exist."
+    image_path = Path(Path(input_file).parent.name, Path(input_file).name)
+    assert Path(prediction_path, image_path).is_file(), "Prediction .npy file for input_file does not exist."
 
 
 # Example to test predictions probabilities output shapes

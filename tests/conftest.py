@@ -64,7 +64,7 @@ def generate_signature(names, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD):
 def generate_fields_fixture(signature):
     """Function to generate fixtures dynamically with dynamic arguments."""
     def fixture_function(**options):  # fmt: skip
-        return {k: v for k, v in options.items() if v is not None}
+        return {k: v for k, v in options.items()}   # with if v = None to include inputs that are None
     fixture_function.__signature__ = signature
     return pytest.fixture(scope="module")(fixture_function)
 

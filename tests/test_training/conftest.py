@@ -43,11 +43,10 @@ import pytest
 import api
 
 
-# todo: params=[None] causes KeyError because it doesn't make mlflow_username a proper parameter
 @pytest.fixture(scope="module", params=[None])
 def mlflow_username(request):
-    """Fixture to provide the mlflow_username argument to api.train."""
-    return request.param
+   """Fixture to provide the mlflow_username argument to api.train."""
+   return request.param
 
 
 @pytest.fixture(scope="module", params=["mobilenetv2"])

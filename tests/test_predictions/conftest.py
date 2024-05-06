@@ -50,7 +50,7 @@ def model_dir(request):
     return f"{api.config.MODELS_PATH}/{request.param}"
 
 
-@pytest.fixture(scope="module", params=["images/MU_15/DJI_0_0001_R.npy"])
+@pytest.fixture(scope="module", params=["images/KA_02/DJI_0_0001_R.npy"])
 def input_file(request):
     """Fixture to provide the input_file argument to api.predict."""
     return request.param
