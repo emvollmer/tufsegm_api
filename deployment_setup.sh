@@ -16,7 +16,7 @@ if rclone listremotes | grep -q "rshare:" ; then
         # check for error due to rclone version being higher than 1.62.2, amend endpoint if required
         if rclone about rshare: 2>&1 | grep -q "use the /dav/files/USER endpoint instead of /webdav" ; then
             echo "RCLONE running with a higher version than 1.62. Overwriting /webdav endpoint with /dav/files/USER to fix this..."
-            echo export RCLONE_CONFIG_RSHARE_URL=${RCLONE_CONFIG_RSHARE_URL//webdav}/dav/files/${RCLONE_CONFIG_RSHARE_USER} >> /root/.bashrc
+            echo export RCLONE_CONFIG_RSHARE_URL=${RCLONE_CONFIG_RSHARE_URL/webdav\/}dav/files/${RCLONE_CONFIG_RSHARE_USER} >> /root/.bashrc
             source /root/.bashrc
         fi
         # finally, make sure we now have access to our storage!
@@ -40,19 +40,13 @@ else
 fi
 
 # ########## Installing general OS prerequisites
-if dpkg -l | grep libgl1 | grep -v libgl1-mesa; then
-    echo "libgl1 already installed. Requirement satisfied."
-else
-    echo "libgl1 not installed. Installing now..."
-    yes | apt-get install libgl1
-fi
+echo "Installing libgl1..."
+yes | apt-get install libgl1
+echo "Finished installing libgl1."
 
-if dpkg -l | grep -q libgl1-mesa-glx; then
-    echo "libgl1-mesa-glx already installed. Requirement satisfied."
-else
-    echo "libgl1-mesa-glx not installed. Installing now..."
-    yes | apt install libgl1-mesa-glx
-fi
+echo "Installing libgl1-mesa-glx..."
+yes | apt install libgl1-mesa-glx
+echo "Finished installing libgl1-mesa-glx."
 
 # ########## Check current python version
 required_ver="3.8"
