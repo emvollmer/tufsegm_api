@@ -39,15 +39,6 @@ else
     fi
 fi
 
-# ########## Installing general OS prerequisites
-echo "Installing libgl1..."
-yes | apt-get install libgl1
-echo "Finished installing libgl1."
-
-echo "Installing libgl1-mesa-glx..."
-yes | apt install libgl1-mesa-glx
-echo "Finished installing libgl1-mesa-glx."
-
 # ########## Check current python version
 required_ver="3.8"
 current_ver=$(python --version 2>&1 | cut -d ' ' -f 2 | cut -d '.' -f 1,2)
@@ -72,6 +63,15 @@ if ! dpkg -l | grep -q python3.8-venv; then
 else
     echo "Python3.8-venv already installed. Requirement satisfied."
 fi
+
+# ########## Installing python-related prerequisites (necessary for deep-start to work)
+echo "Installing libgl1..."
+yes | apt-get install libgl1
+echo "Finished installing libgl1."
+
+echo "Installing libgl1-mesa-glx..."
+yes | apt install libgl1-mesa-glx
+echo "Finished installing libgl1-mesa-glx."
 
 # ########## Clone API repository
 api_name="tufsegm_api"
