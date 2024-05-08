@@ -58,8 +58,8 @@ class PredArgsSchema(marshmallow.Schema):
                            "is selected, prediction results will be saved there."
         },
         validate=validate.OneOf(
-            utils.get_dirs(config.MODELS_PATH, entries={config.MODEL_TYPE + config.MODEL_SUFFIX}) + 
-            utils.get_dirs(config.REMOTE_PATH, entries={config.MODEL_TYPE + config.MODEL_SUFFIX})
+            utils.get_local_dirs(config.MODELS_PATH, entries={config.MODEL_TYPE + config.MODEL_SUFFIX}) + 
+            utils.get_remote_dirs(entries={config.MODEL_TYPE + config.MODEL_SUFFIX})
         ),
         required=True,
     )
@@ -136,8 +136,8 @@ class TrainArgsSchema(marshmallow.Schema):
                            "downloaded from Nextcloud if local 'data' is empty.",
         },
         validate=validate.OneOf(
-            utils.get_dirs(config.DATA_PATH, entries={'images', 'annotations'}) + 
-            utils.get_dirs(config.REMOTE_PATH, entries={'images', 'annotations'})
+            utils.get_local_dirs(entries={'images', 'annotations'}) + 
+            utils.get_remote_dirs(entries={'images', 'annotations'})
         ),
         required=False,
         load_default=None

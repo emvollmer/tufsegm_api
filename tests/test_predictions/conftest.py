@@ -39,7 +39,6 @@ number of tests generated can grow exponentially.
 """
 # pylint: disable=redefined-outer-name
 import pytest
-from deepaas.model.v2.wrapper import UploadedFile
 
 import api
 
@@ -54,7 +53,6 @@ def model_dir(request):
 def input_file(request):
     """Fixture to provide the input_file argument to api.predict."""
     return request.param
-    #return UploadedFile("", filename=f"{filepath}/{request.param}")
 
 
 @pytest.fixture(scope="module", params=[False])

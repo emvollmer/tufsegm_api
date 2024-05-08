@@ -17,7 +17,6 @@ the same folder. However, remember to add the prefix `test_` to the file.
 """
 # pylint: disable=redefined-outer-name
 # pylint: disable=unused-argument
-
 from pathlib import Path
 
 
@@ -65,33 +64,21 @@ def test_datasets_local(metadata):
 
 def test_datasets_remote(metadata):
     """Tests that metadata provides remote dataset directories."""
-    # Is this allowed? Accessing remote NextCloud in tests?
     assert "datasets_remote" in metadata
     assert isinstance(metadata["datasets_remote"], list), "'datasets_remote' isn't a list."
     assert all(isinstance(v, str) for v in metadata["datasets_remote"]), "Not all elements in 'datasets_remote' are strings."
-    assert all(Path(v).is_dir() for v in metadata["datasets_remote"]), "Not all elements in 'datasets_remote' are valid directories."
 
 
-def test_models(metadata):
-    """Tests that metadata provides model directories."""
+def test_models_local(metadata):
+    """Tests that metadata provides local model directories."""
     assert "models_local" in metadata
     assert isinstance(metadata["models_local"], list), "'models_local' isn't a list."
     assert all(isinstance(v, str) for v in metadata["models_local"]), "Not all elements in 'models_local' are strings."
     assert all(Path(v).is_dir() for v in metadata["models_local"]), "Not all elements in 'models_local' are valid directories."
-    # Is this allowed? Accessing remote NextCloud in tests?
+
+
+def test_models_remote(metadata):
+    """Tests that metadata provides remote model directories."""
     assert "models_remote" in metadata
     assert isinstance(metadata["models_remote"], list), "'models_remote' isn't a list."
     assert all(isinstance(v, str) for v in metadata["models_remote"]), "Not all elements in 'models_remote' are strings."
-    assert all(Path(v).is_dir() for v in metadata["models_remote"]), "Not all elements in 'models_remote' are valid directories."
-
-
-# def test_models(metadata):
-#     """Tests that metadata provides models information."""
-#     assert "models" in metadata
-#     assert metadata["models"] == {"test_simplemodel": "Testing model."}
-
-
-# def test_datasets(metadata):
-#     """Tests that metadata provides datasets information."""
-#     assert "datasets" in metadata
-#     assert metadata["datasets"] == ["t100-dataset.npz"]

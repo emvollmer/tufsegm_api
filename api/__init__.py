@@ -40,10 +40,10 @@ def get_metadata():
             "description": config.API_METADATA.get("summary"),
             "license": config.API_METADATA.get("license"),
             "version": config.API_METADATA.get("version"),
-            "datasets_local": utils.get_dirs(config.DATA_PATH, entries={'images', 'annotations'}),
-            "datasets_remote": utils.get_dirs(config.REMOTE_PATH, entries={'images', 'annotations'}),
-            "models_local": utils.get_dirs(config.MODELS_PATH, entries={model_name}),
-            "models_remote": utils.get_dirs(config.REMOTE_PATH, entries={model_name}),
+            "datasets_local": utils.get_local_dirs(entries={'images', 'annotations'}),
+            "datasets_remote": utils.get_remote_dirs(entries={'images', 'annotations'}),
+            "models_local": utils.get_local_dirs(config.MODELS_PATH, entries={model_name}),
+            "models_remote": utils.get_remote_dirs(entries={model_name}),
         }
         logger.debug("Package model metadata: %s", metadata)
         return metadata

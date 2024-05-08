@@ -5,12 +5,15 @@ Modify this file only if you need to add new fixtures or modify the existing
 related to the environment and generic tests.
 """
 # pylint: disable=redefined-outer-name
+from datetime import datetime
 import inspect
+import json
 import os
 import pathlib
 import shutil
 import tempfile
 
+from unittest.mock import patch
 import pytest
 
 import api
@@ -70,7 +73,15 @@ def generate_fields_fixture(signature):
 
 
 @pytest.fixture(scope="module")
-def metadata():
+def patch_get_remote_dirs():
+    """Patch to replace get_remote_dirs (NextCloud access)"""
+    with patch("api.utils.get_remote_dirs", autospec=True) as mock_get_remote_dirs:
+        mock_get_remote_dirs.return_value = ["dummy/folder1/", "dummy/folder2/"]
+        yield mock_get_remote_dirs
+
+
+@pytest.fixture(scope="module")
+def metadata(patch_get_remote_dirs):
     """Fixture to return get_metadata to assert properties."""
     return api.get_metadata()
 
@@ -82,7 +93,7 @@ globals()["predict_kwds"] = generate_fields_fixture(signature)
 
 
 @pytest.fixture(scope="module")
-def predictions(predict_kwds):
+def predictions(patch_get_remote_dirs, predict_kwds):
     """Fixture to return predictions to assert properties."""
     return api.predict(**predict_kwds)
 
@@ -94,6 +105,20 @@ globals()["training_kwds"] = generate_fields_fixture(signature)
 
 
 @pytest.fixture(scope="module")
-def training(training_kwds):
+def training(patch_run_bash_subprocess, training_kwds):
     """Fixture to return training to assert properties."""
     return api.train(**training_kwds)
+
+
+@pytest.fixture(scope="module")
+def patch_run_bash_subprocess(tmptestsdir):
+    """Patch to replace run_bash_subprocess (train.sh execution)"""
+    with patch("tufsegm_api.utils.run_bash_subprocess", autospec=True) as mock_run_bash_subprocess:
+        # create dummy training folder and content
+        mock_model_path = pathlib.Path(tmptestsdir, api.config.MODELS_PATH, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+        mock_model_path.mkdir(exist_ok=True)
+        with open(pathlib.Path(mock_model_path, "eval.json"), "w") as mock_json_file:
+            json.dump({"mock metrics": 0.0}, mock_json_file)
+        # run training with a mock subprocess
+        mock_run_bash_subprocess.return_value = 0
+        yield mock_run_bash_subprocess

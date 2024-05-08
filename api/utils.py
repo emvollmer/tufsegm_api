@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 logger.setLevel(config.LOG_LEVEL)
 
 
+def get_local_dirs(local_dir=config.DATA_PATH, entries: set = {}):
+    """Call get_dirs for local directories"""
+    return get_dirs(local_dir, entries)
+
+
+def get_remote_dirs(remote_dir=config.REMOTE_PATH, entries: set = {}):
+    """Call get_dirs for remote directories"""
+    return get_dirs(remote_dir, entries)
+
+
 def get_dirs(root_dir: str, entries: set = {}):
     """Utility to return a list of directories containing 
     specific folder / file entries.

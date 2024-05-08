@@ -119,17 +119,3 @@ def lr(request):
 def seed(request):
     """Fixture to provide the seed argument to api.train."""
     return request.param
-
-
-# Example of fixture for shuffle parametrization
-# @pytest.fixture(scope="module", params=[None, False])
-# def shuffle(request):
-#     """Fixture to provide the shuffle option to api.train."""
-#     return request.param
-
-
-# Example of fixture for validation_split parametrization
-# @pytest.fixture(scope="module", params=[None, 0.1])
-# def validation_split(request):
-#     """Fixture to provide the validation_split option to api.train."""
-#     return request.param

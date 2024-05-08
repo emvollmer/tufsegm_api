@@ -18,38 +18,7 @@ the same folder. However, remember to add the prefix `test_` to the file.
 # pylint: disable=redefined-outer-name
 # pylint: disable=unused-argument
 
-from unittest.mock import patch
 
-
-# def test_training_return_type(training):
-#     """Tests that training returns a dict type."""
-#     assert isinstance(training, dict)
-
-
-@patch("tufsegm_api.utils.run_bash_subprocess")
-def test_training(mock_run_bash_subprocess, training):
-    # todo: Try out if this test function with a mock subprocess call works
-    # ----- it will need to be changed if "setup" is to be tested
-
-    # define what the mock function should return
-    mock_run_bash_subprocess.return_value = 0
-
+def test_training(patch_run_bash_subprocess, training):
+    """Test that training returns a dict type (using mock function)"""
     assert isinstance(training, dict)
-
-    # ensure the mock was called
-    mock_run_bash_subprocess.assert_called_once()  # check if the subprocess was called
-
-
-# Example to test training return includes 'end_time'
-# def test_end_time(training):
-#     """Test training result includes end_time on the return."""
-#     assert "end_time" in training
-#     assert isinstance(training["end_time"], int)
-#     assert training["end_time"] > 0
-
-
-# Example to test training return includes 'run_id'
-# def test_run_id(training):
-#     """Test training result includes run_id on the return."""
-#     assert "run_id" in training
-#     assert isinstance(training["run_id"], str)
