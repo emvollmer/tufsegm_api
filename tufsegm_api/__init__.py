@@ -13,15 +13,12 @@ import os
 
 import tufsegm_api.config as cfg
 
-from tufsegm_api.utils import (
-    copy_remote, unzip, setup, run_bash_subprocess, 
-    configure_api_logging, mlflow_logging
-)
+from tufsegm_api import utils
 
 from ThermUrbanFeatSegm.scripts.segm_models.infer_UNet import main as predict_func
 
 logger = logging.getLogger(__name__)
-configure_api_logging(logger, cfg.LOG_LEVEL)
+utils.configure_api_logging(logger, cfg.LOG_LEVEL)
 
 
 class ResultError(Exception):
@@ -85,7 +82,7 @@ def train(**kwargs):
         if set(os.listdir(cfg.REMOTE_DATA_PATH)) >= required_entries:
             logger.info(f"Data folder '{data_path}' does not contain images & annotations, "
                         f"downloading data from '{cfg.REMOTE_DATA_PATH}'...")
-            copy_remote(frompath=Path(cfg.REMOTE_DATA_PATH), topath=Path(data_path))
+            utils.copy_remote(frompath=Path(cfg.REMOTE_DATA_PATH), topath=Path(data_path))
 
         else:
             raise FileNotFoundError(f"Remote data folder '{cfg.REMOTE_DATA_PATH}' "
@@ -95,11 +92,11 @@ def train(**kwargs):
     zip_paths = list(data_path.rglob("*.zip"))
     if zip_paths:
         logger.info(f"Extracting data from {len(zip_paths)} .zip files...")
-        unzip(zip_paths)
+        utils.unzip(zip_paths)
 
     # prepare data if not yet done
     if not data_entries >= {"masks", "train.txt", "test.txt"}:
-        setup(
+        utils.setup(
             data_path=data_path, 
             test_size=kwargs['test_size'],
             save_for_view=kwargs['save_for_viewing']
@@ -128,7 +125,7 @@ def train(**kwargs):
     creation_time = datetime.now()
 
     logger.info(f"Training with arguments:\n{train_cmd}")
-    run_bash_subprocess(train_cmd)
+    utils.run_bash_subprocess(train_cmd)
     logger.info(f"Training and evaluation completed.")
 
     # log model (if desired) and return training results
@@ -138,7 +135,7 @@ def train(**kwargs):
         # track model with mlflow if user provided information
         if kwargs['mlflow_username']:
             logger.info("Beginning MLFLow experiment logging...")
-            mlflow_logging(model_root=Path(model_path))
+            utils.mlflow_logging(model_root=Path(model_path))
             logger.info("Completed MLFLow experiment logging.")
 
         model_time = datetime.strptime(model_path.name, "%Y-%m-%d_%H-%M-%S")
