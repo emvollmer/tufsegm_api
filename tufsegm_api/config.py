@@ -40,6 +40,11 @@ REMOTE_MODELS_PATH = Path(REMOTE_MODELS_PATH)
 SUBMODULE_NAME = 'TUFSeg'
 SUBMODULE_PATH = Path(BASE_PATH, SUBMODULE_NAME)
 
+if str(SUBMODULE_PATH) not in sys.path:
+    print(f"SUBMODULE_PATH '{SUBMODULE_PATH}' not in sys.path. "
+          f"Adding to allow for imports from submodule...")
+    sys.path.insert(0, str(SUBMODULE_PATH))
+
 # configure logging:
 # logging level across various modules can be setup via USER_LOG_LEVEL,
 # options: DEBUG, INFO(default), WARNING, ERROR, CRITICAL
