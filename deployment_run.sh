@@ -1,7 +1,7 @@
 #!/bin/bash
 
 api_name="tufsegm_api"
-submod_name="ThermUrbanFeatSegm"
+submod_name="TUFSeg"
 
 # ########## Ensure API directory given (deployment_setup.sh was previously run)
 if [[ $(pwd) != *$api_name && ! -d $api_name ]]; then
@@ -39,9 +39,9 @@ fi
 echo "Update submodule."
 git pull --recurse-submodules
 # add branch name of submodule to .gitmodules
-if ! grep -q "branch = master" ".gitmodules"; then
-   echo -e "\tbranch = master" >> ".gitmodules"
-   echo "Added 'branch = master' to .gitmodules."
+if ! grep -q "branch = main" ".gitmodules"; then
+   echo -e "\tbranch = main" >> ".gitmodules"
+   echo "Added 'branch = main' to .gitmodules."
 fi
 git submodule update --remote --recursive
 

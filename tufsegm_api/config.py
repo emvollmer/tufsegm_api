@@ -37,7 +37,7 @@ REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH", default=osp.join(REMOTE_PAT
 REMOTE_MODELS_PATH = Path(REMOTE_MODELS_PATH)
 
 # Define submodule name and path
-SUBMODULE_NAME = 'ThermUrbanFeatSegm'
+SUBMODULE_NAME = 'TUFSeg'
 SUBMODULE_PATH = Path(BASE_PATH, SUBMODULE_NAME)
 
 # configure logging:

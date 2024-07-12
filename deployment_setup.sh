@@ -75,7 +75,7 @@ echo "Finished installing libgl1-mesa-glx."
 
 # ########## Clone API repository
 api_name="tufsegm_api"
-submod_name="ThermUrbanFeatSegm"
+submod_name="TUFSeg"
 
 if [[ $(pwd) != *$api_name && ! -d $api_name ]]; then
     echo "-----------------------"
