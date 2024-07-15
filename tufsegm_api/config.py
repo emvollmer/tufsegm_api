@@ -9,6 +9,21 @@ import os.path as osp
 from pathlib import Path
 import sys
 
+# Training with Tensorflow requires XLA_FLAGS to be set in the training
+# Python script, which in turn requires the CUDA_HOME environment variable
+# to be defined. The following code helps prevent a "KeyError: 'CUDA_HOME'"
+CUDA_PATH = "/usr/local/cuda/"
+if os.path.exists(CUDA_PATH):
+    if "CUDA_HOME" not in os.environ:
+        os.environ["CUDA_HOME"] = CUDA_PATH
+        print(f"CUDA_HOME '{CUDA_PATH}' not an environment variable. "
+              f"Adding to prevent KeyError in tf training...")
+    else:
+        print(f"CUDA_HOME already defined as {os.environ['CUDA_HOME']}")
+else:
+    print(f"CUDA does not exist at {CUDA_PATH}! Please check and define path manually...")
+    sys.exit(1)
+
 # DEEPaaS can load more than one installed model. Therefore, in order to
 # avoid conflicts, each default PATH environment variables should lead to
 # a different folder. The current practice is to use the path from where the

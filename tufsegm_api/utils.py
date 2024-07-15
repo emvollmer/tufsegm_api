@@ -11,6 +11,7 @@ import mlflow.tensorflow
 import os
 from pandas.io.json._normalize import nested_to_record
 from pathlib import Path
+import re
 import signal
 import shutil
 import subprocess
@@ -246,7 +247,15 @@ def run_bash_subprocess(cmd: list, timeout: int = 1000):
                        f"Extending timeout to {timeout} seconds.")
 
     try:
-        process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+        
+        # print output to console in real-time
+        for line in iter(process.stdout.readline, ''):
+            if not re.match(r'^\s*\d+%.*$', line):
+                print(line, end='')
+
         return_code = process.wait(timeout=timeout)
 
         # check the return code to terminate in case the bash script was forcefully exited
