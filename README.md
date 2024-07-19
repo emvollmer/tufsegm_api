@@ -2,21 +2,15 @@
 
 [![Build Status](https://jenkins.indigo-datacloud.eu/buildStatus/icon?job=Pipeline-as-code/DEEP-OC-org/tufsegm_api/test)](https://jenkins.indigo-datacloud.eu/job/Pipeline-as-code/job/DEEP-OC-org/job/tufsegm_api/job/test)
 
-Deepaas API for thermal urban feature semantic segmentation model repo.
+Deepaas API for thermal urban feature segmentation (TUFSeg). This code makes use of the [TUFSeg model repo](https://github.com/emvollmer/TUFSeg).
 
-To facilitate setting up, the bash script `deployment_setup.sh` can be run to install everything automatically:
+To facilitate setting up, the bash script `setting_up_deployment.sh` can be run to install everything automatically:
 ```bash
-wget https://raw.githubusercontent.com/emvollmer/tufsegm_api/master/deployment_setup.sh
-source deployment_setup.sh
+wget https://raw.githubusercontent.com/emvollmer/tufsegm_api/master/setting_up_deployment.sh
+source setting_up_deployment.sh
 ```
 
-After setup, simply launch and run [deepaas](https://github.com/indigo-dc/DEEPaaS) via the script `deployment_run.sh`.
-```bash
-source deployment_run.sh
-# Alternatively, do
-source venv/bin/activate
-deepaas-run --listen-ip 0.0.0.0
-```
+This takes care of all required installations and finishes by running [deepaas](https://github.com/indigo-dc/DEEPaaS).
 
 The associated Docker container for this module can be found in https://github.com/emvollmer/DEEP-OC-tufsegm_api.
 
@@ -29,9 +23,9 @@ The associated Docker container for this module can be found in https://github.c
 ├── VERSION                 <- Version file indicating the version of the model
 │
 ├── tufsegm_api
-│   ├── README.md           <- Instructions on how to integrate your model with DEEPaaS.
-│   ├── __init__.py         <- Makes <your-model-source> a Python module
-│   ├── ...                 <- Other source code files
+│   ├── README.md           <- Instructions on model integration with DEEPaaS.
+│   ├── __init__.py         <- Makes tufsegm_api a Python module, contains main functions
+│   ├── utils.py            <- Helper functions
 │   └── config.py           <- Module to define CONSTANTS used across the AI-model python package
 │
 ├── api                     <- API subpackage for the integration with DEEP API
@@ -45,12 +39,10 @@ The associated Docker container for this module can be found in https://github.c
 │
 ├── docs                   <- A default Sphinx project; see sphinx-doc.org for details
 │
-├── models                 <- Folder to store your models
+├── models                 <- Folder to which models are automatically stored 
+|                             (if not on nextcloud)
 │
-├── notebooks              <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                             the creator's initials (if many user development),
-│                             and a short `_` delimited description, e.g.
-│                             `1.0-jqp-initial_data_exploration.ipynb`.
+├── notebooks              <- Jupyter notebooks
 │
 ├── references             <- Data dictionaries, manuals, and all other explanatory materials.
 │
@@ -76,65 +68,31 @@ The associated Docker container for this module can be found in https://github.c
 └── tox.ini                <- tox file with settings for running tox; see tox.testrun.org
 ```
 
-## Integrating your model with DEEPaaS
+## Model Integration with DEEPaaS
 
-After executing the cookiecutter template, you will have a folder structure
-ready to be integrated with DEEPaaS. The you can decide between starting the
-project from scratch or integrating your existing model with DEEPaaS.
+The folder `tufsegm_api` is designed to contain code with which to accesss the model code
+from the submodule [TUFSeg](https://github.com/emvollmer/TUFSeg).
+The folder `tufsegm_api` contains an `__init__.py` file conserving the already defined methods.
 
-The folder `tufsegm_api` is designed to contain the source
-code of your model. You can add your model files there or replace it by another
-repository by using [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules).
-The only requirement is that the folder `tufsegm_api` contains
-an `__init__.py` file conserving the already defined methods. You can edit the
-template functions already defined inside or import your own functions from
-another file. See the [README.md](./tufsegm_api/README.md)
-in the `tufsegm_api` folder for more information.
-
-Those methods, are used by the subpackage `api` to define the API interface.
+Methods in `tufsegm_api` are used by the subpackage `api` to define the API interface.
 See the project structure section for more information about the `api` folder.
-You are allowed to customize your model API and CLI arguments and responses by
-editing `api.schemas` and`api.responses` modules. See documentation inside those
-files for more information.
-
-Sometimes you only need to add an interface to an existing model. In case that
-the model is already published in a public repository, you can add it as a
-requirement into the `requirements.txt` file. If the model is not published
-yet, you can add it as a submodule inside or outside the project and install
-it by using `pip install -e <path-to-model>`. In both cases, you will need to
-interface the model with the `api` subpackage with the required methods. See
-the [README.md](./tufsegm_api/README.md)
-
-## Documentation
-
-TODO: Add instructions on how to build documentation
+API and CLI arguments and responses are adapted in `api.schemas` and `api.responses`.
 
 ## Testing
 
-Testing process is automated by tox library. You can check the environments
-configured to be tested by running `tox --listenvs`. If you are missing one
-of the python environments configured to be tested (e.g. py310, py39) and
-you are using `conda` for managing your virtual environments, consider using
-`tox-conda` to automatically manage all python installation on your testing
-virtual environment.
-
+Testing process is automated by tox library. 
 Tests are implemented following [pytest](https://docs.pytest.org) framework.
-Fixtures and parametrization are placed inside `conftest.py` files meanwhile
-assertion tests are located on `test_*.py` files. As developer, you can edit
-any of the existing files or add new ones as needed. However, the project is
-designed so you only have to edit the files inside:
+Fixtures and parametrization are placed inside `conftest.py` files while
+assertion tests are located on `test_*.py` files.
 
-    - tests/data: To add your testing data (small datasets, etc.).
-    - tests/models: To add your testing models (small models, etc.).
-    - tests/test_metadata: To fix and test your metadata requirements.
-    - tests/test_predictions: To fix and test your predictions requirements.
-    - tests/test_training: To fix and test your training requirements.
+    - tests/data: Contains testing data (sample images).
+    - tests/models: Contains a dummy model.
+    - tests/test_metadata: Tests for get_metadata functionality.
+    - tests/test_predictions: Tests for inference functionality.
+    - tests/test_training: Tests for training functionality.
 
-The folder `tests/data` should contain minimalistic but representative
-datasets to be used for testing. In a similar way, `tests/models` should
-contain simple models for testing that can fit on your code repository. This
-is important to avoid large files on your repository and to speed up the
-testing process.
+The dummy model is of the smallest possible size, but still comparatively
+large. For this reason, the tests take a bit of time to run.
 
 Running the tests with tox:
 
@@ -148,4 +106,8 @@ Running the tests with pytest:
 ```bash
 $ pip install -r requirements-test.txt
 $ python -m pytest --numprocesses=auto --dist=loadscope tests
+```
+or for more detailled information
+```bash
+$ python -m pytest tests
 ```
