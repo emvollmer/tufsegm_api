@@ -162,19 +162,20 @@ def unzip(zip_paths: list):
     Raises:
         DiskSpaceExceeded: If available disk space was exceeded during unzipping.
     """
-    log_disk_usage(f"Begin unzipping {len(zip_paths)} .zip files...")
+    log_disk_usage(f"Begin unzipping {len(zip_paths)} .zip files. This may take a while...")
 
     limit_gb = check_available_space(PROJ_LIM_OPTIONS["DATA"])   # get absolute limit
     limit_bytes = floor(limit_gb * (1024 ** 3))   # convert to bytes
 
     for zip_path in zip_paths:
-        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             for file_info in zip_ref.infolist():
                 if get_disk_usage(cfg.DATA_PATH) + file_info.file_size >= limit_bytes:
                     raise DiskSpaceExceeded(f"Unzipping will exceed the maximum allowed disk space "
                                             f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder.")
             # unzip the file to its current directory
-            zip_ref.extractall(zip_file.parent)
+            logger.info(f"Unzipping '{zip_path}'")
+            zip_ref.extractall(zip_path.parent)
 
         logger.info("Cleaning up zip file...")
         zip_path.unlink()

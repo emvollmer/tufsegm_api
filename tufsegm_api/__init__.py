@@ -156,7 +156,9 @@ def train(**kwargs):
 
 if __name__ == '__main__':
     ex_args = {
-        # 'model_type': 'UNet',
+        'mlflow_username': None,
+        'backbone': "resnet152",
+        'weights': "imagenet",
         'dataset_path': None,
         'save_for_viewing': False,
         'test_size': 0.2,
@@ -164,7 +166,7 @@ if __name__ == '__main__':
         'processing': "basic",
         'img_size': "320x256",
         'epochs': 1,
-        'batch_size': 9,
+        'batch_size': 8,
         'lr': 0.001,
         'seed': 42
     }
