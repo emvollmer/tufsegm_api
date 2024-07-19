@@ -247,15 +247,7 @@ def run_bash_subprocess(cmd: list, timeout: int = 1000):
                        f"Extending timeout to {timeout} seconds.")
 
     try:
-        process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-        )
-        
-        # print output to console in real-time
-        for line in iter(process.stdout.readline, ''):
-            if not re.match(r'^\s*\d+%.*$', line):
-                print(line, end='')
-
+        process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
         return_code = process.wait(timeout=timeout)
 
         # check the return code to terminate in case the bash script was forcefully exited
