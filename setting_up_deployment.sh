@@ -64,6 +64,12 @@ pip install packaging==22.0
 pip install -e ./TUFSeg/
 pip install -e .
 
+# ########## Adding API and submodule to PYTHONPATH to avoid ModuleNotFoundError
+# This HAS to be done here - additions in f.e. the API config are only temporary
+BASE_DIR=$(pwd)
+export PYTHONPATH="${PYTHONPATH}:$BASE_DIR"
+export PYTHONPATH="${PYTHONPATH}:$BASE_DIR/TUFSeg"
+
 echo "================================================================"
 echo "DEPLOYMENT SETUP COMPLETE"
 echo "================================================================"

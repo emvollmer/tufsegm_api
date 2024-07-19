@@ -24,15 +24,7 @@ else:
     print(f"CUDA does not exist at {CUDA_PATH}! Please check and define path manually...")
     sys.exit(1)
 
-# DEEPaaS can load more than one installed model. Therefore, in order to
-# avoid conflicts, each default PATH environment variables should lead to
-# a different folder. The current practice is to use the path from where the
-# model source is located.
 BASE_PATH = Path(__file__).resolve(strict=True).parents[1]
-if str(BASE_PATH) not in sys.path:
-    print(f"BASE_PATH '{BASE_PATH}' not in sys.path. "
-          f"Adding to allow for imports from submodule...")
-    sys.path.insert(0, str(BASE_PATH))
 
 # Path definition for data folder
 DATA_PATH = os.getenv("DATA_PATH", default=osp.join(BASE_PATH, "data"))
@@ -54,11 +46,6 @@ REMOTE_MODELS_PATH = Path(REMOTE_MODELS_PATH)
 # Define submodule name and path
 SUBMODULE_NAME = 'TUFSeg'
 SUBMODULE_PATH = Path(BASE_PATH, SUBMODULE_NAME)
-
-if str(SUBMODULE_PATH) not in sys.path:
-    print(f"SUBMODULE_PATH '{SUBMODULE_PATH}' not in sys.path. "
-          f"Adding to allow for imports from submodule...")
-    sys.path.insert(0, str(SUBMODULE_PATH))
 
 # configure logging:
 # logging level across various modules can be setup via USER_LOG_LEVEL,
