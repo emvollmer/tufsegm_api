@@ -1,16 +1,18 @@
 """Module to define CONSTANTS used across the DEEPaaS Interface.
 
 This module is used to define CONSTANTS used across the DEEPaaS API Interface.
-The `config.py` file in the model_api package defines CONSTANTS related to your model.
-By convention, the CONSTANTS defined are in UPPER_CASE.
+The `config.py` file in the model_api package defines CONSTANTS related to
+the model. By convention, CONSTANTS defined are in UPPER_CASE.
 """
 import os
 import logging
 from importlib import metadata
-from pathlib import Path
-import sys
 
-from tufsegm_api.config import DATA_PATH, MODELS_PATH, MODEL_TYPE, MODEL_SUFFIX, REMOTE_PATH
+# Necessary imports for api.__init__ code
+from tufsegm_api.config import (
+    DATA_PATH, REMOTE_PATH,
+    MODELS_PATH, MODEL_TYPE, MODEL_SUFFIX
+)
 
 # API name
 API_NAME = os.getenv("API_NAME", default="tufsegm_api")

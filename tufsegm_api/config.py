@@ -21,7 +21,8 @@ if os.path.exists(CUDA_PATH):
     else:
         print(f"CUDA_HOME already defined as {os.environ['CUDA_HOME']}")
 else:
-    print(f"CUDA does not exist at {CUDA_PATH}! Please check and define path manually...")
+    print(f"CUDA does not exist at {CUDA_PATH}! "
+          f"Please check and define path manually...")
     sys.exit(1)
 
 BASE_PATH = Path(__file__).resolve(strict=True).parents[1]
@@ -37,10 +38,12 @@ MODEL_TYPE = "UNet"
 MODEL_SUFFIX = ".hdf5"
 
 # Remote (rshare) paths for data and models
-REMOTE_PATH = os.getenv("REMOTE_PATH", default="/storage/tufsegm")    # replaced "rshare:tufsegm"
-REMOTE_DATA_PATH = os.getenv("REMOTE_DATA_PATH", default=osp.join(REMOTE_PATH, "data"))
+REMOTE_PATH = os.getenv("REMOTE_PATH", default="/storage/tufsegm")
+REMOTE_DATA_PATH = os.getenv("REMOTE_DATA_PATH",
+                             default=osp.join(REMOTE_PATH, "data"))
 REMOTE_DATA_PATH = Path(REMOTE_DATA_PATH)
-REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH", default=osp.join(REMOTE_PATH, "models"))
+REMOTE_MODELS_PATH = os.getenv("REMOTE_MODELS_PATH",
+                               default=osp.join(REMOTE_PATH, "models"))
 REMOTE_MODELS_PATH = Path(REMOTE_MODELS_PATH)
 
 # Define submodule name and path
@@ -65,5 +68,5 @@ LIMIT_GB = int(os.getenv("LIMIT_GB", default="20"))
 DATA_LIMIT_GB = int(os.getenv("DATA_LIMIT_GB", default="15"))
 
 # Remote MLFlow server
-MLFLOW_REMOTE_SERVER="https://mlflow.cloud.ai4eosc.eu/"
-MLFLOW_EXPERIMENT_NAME=SUBMODULE_NAME
+MLFLOW_REMOTE_SERVER = "https://mlflow.cloud.ai4eosc.eu/"
+MLFLOW_EXPERIMENT_NAME = SUBMODULE_NAME

@@ -55,7 +55,8 @@ def copytree_data(tmptestsdir, tests_datapath):
 @pytest.fixture(scope="module", autouse=True)
 def copytree_models(tmptestsdir, tests_modelspath):
     """Fixture to copy the original models directory to the test directory."""
-    shutil.copytree(tests_modelspath, f"{tmptestsdir}/{api.config.MODELS_PATH}")
+    shutil.copytree(tests_modelspath,
+                    f"{tmptestsdir}/{api.config.MODELS_PATH}")
 
 
 def generate_signature(names, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD):
@@ -67,7 +68,8 @@ def generate_signature(names, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD):
 def generate_fields_fixture(signature):
     """Function to generate fixtures dynamically with dynamic arguments."""
     def fixture_function(**options):  # fmt: skip
-        return {k: v for k, v in options.items()}   # with if v = None to include inputs that are None
+        return {k: v for k, v in options.items()}
+        # with if v = None to include inputs that are None
     fixture_function.__signature__ = signature
     return pytest.fixture(scope="module")(fixture_function)
 
@@ -75,8 +77,13 @@ def generate_fields_fixture(signature):
 @pytest.fixture(scope="module")
 def patch_get_remote_dirs():
     """Patch to replace get_remote_dirs (NextCloud access)"""
-    with patch("api.utils.get_remote_dirs", autospec=True) as mock_get_remote_dirs:
-        mock_get_remote_dirs.return_value = ["dummy/folder1/", "dummy/folder2/"]
+
+    with patch(
+        "api.utils.get_remote_dirs", autospec=True
+    ) as mock_get_remote_dirs:
+        mock_get_remote_dirs.return_value = [
+            "dummy/folder1/", "dummy/folder2/"
+        ]
         yield mock_get_remote_dirs
 
 
@@ -113,11 +120,21 @@ def training(patch_run_bash_subprocess, training_kwds):
 @pytest.fixture(scope="module")
 def patch_run_bash_subprocess(tmptestsdir):
     """Patch to replace run_bash_subprocess (train.sh execution)"""
-    with patch("tufsegm_api.utils.run_bash_subprocess", autospec=True) as mock_run_bash_subprocess:
+
+    with patch(
+        "tufsegm_api.utils.run_bash_subprocess", autospec=True
+    ) as mock_run_bash_subprocess:
         # create dummy training folder and content
-        mock_model_path = pathlib.Path(tmptestsdir, api.config.MODELS_PATH, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+        mock_model_path = pathlib.Path(
+            tmptestsdir,
+            api.config.MODELS_PATH,
+            datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        )
         mock_model_path.mkdir(exist_ok=True)
-        with open(pathlib.Path(mock_model_path, "eval.json"), "w") as mock_json_file:
+
+        with open(
+            pathlib.Path(mock_model_path, "eval.json"), "w"
+        ) as mock_json_file:
             json.dump({"mock metrics": 0.0}, mock_json_file)
         # run training with a mock subprocess
         mock_run_bash_subprocess.return_value = 0

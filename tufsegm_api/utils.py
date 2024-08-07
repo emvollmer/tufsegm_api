@@ -11,15 +11,11 @@ import mlflow.tensorflow
 import os
 from pandas.io.json._normalize import nested_to_record
 from pathlib import Path
-import re
-import signal
 import shutil
 import subprocess
-from subprocess import TimeoutExpired
 import tensorflow as tf
 import time
 import threading
-from typing import Union
 import zipfile
 
 import tufsegm_api.config as cfg
@@ -52,14 +48,16 @@ def configure_api_logging(logger, log_level: int):
     :param logger: logger
     :param log_level: User defined input
     """
-    log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    log_format = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 
     # Define logging to the console
     console_handler = logging.StreamHandler()
     console_handler.setLevel(log_level)
     console_handler.setFormatter(log_format)
     logger.addHandler(console_handler)
-    #logger.setLevel(log_level)
+    # logger.setLevel(log_level)
 
 
 def copy_remote(frompath, topath):
@@ -100,9 +98,12 @@ def copy_remote(frompath, topath):
                         raise DiskSpaceExceeded(
                             f"Copying file will exceed the disk space limit "
                             f"of {limit_gb} GB for '{cfg.BASE_PATH}' folder.")
-                    shutil.copy(f, Path(topath, f.relative_to(frompath).parent))
+                    shutil.copy(
+                        f,
+                        Path(topath, f.relative_to(frompath).parent)
+                    )
                     log_disk_usage(f"Copied '{f}'")
-                
+
                 else:
                     raise FileNotFoundError
 
@@ -114,7 +115,7 @@ def copy_remote(frompath, topath):
                     f"Copying file will exceed the disk space limit "
                     f"of {limit_gb} GB for '{cfg.BASE_PATH}' folder.")
             shutil.copy(frompath, topath)
-        
+
         else:
             raise OSError
 
@@ -125,12 +126,12 @@ def copy_remote(frompath, topath):
 
     except DiskSpaceExceeded as e:
         logger.error(f"Disk space limit almost exceeded: {str(e)}.")
-        
+
         delete_new_contents(topath_contents, set(topath.iterdir()))
 
         raise DiskSpaceExceeded(
-            f"You will need to free up some space on the node to download"
-            f" all the data or work in remote (/storage/) directories!")
+            "You will need to free up some space on the node to download"
+            " all the data or work in remote (/storage/) directories!")
 
     log_disk_usage("Copying complete")
 
@@ -139,11 +140,12 @@ def delete_new_contents(original_contents: set, current_contents: set):
     """Deletes newly copied files and folders
 
     Args:
-        original_contents (set): Set of existing files/folder paths before copying
-        current_contents (set): Set of files/folder paths after copying
+        original_contents (set): existing files/folder paths before copying
+        current_contents (set): files/folder paths after copying
     """
     new_contents = current_contents - original_contents
-    logger.info(f"Deleting newly downloaded files/folders: {len(new_contents)}")
+    logger.info(f"Deleting newly downloaded files/folders: "
+                f"{len(new_contents)}")
 
     for item in new_contents:
         if item.is_dir():
@@ -160,19 +162,24 @@ def unzip(zip_paths: list):
         zip_paths (list): .zip files to extract
 
     Raises:
-        DiskSpaceExceeded: If available disk space was exceeded during unzipping.
+        DiskSpaceExceeded: If available space exceeded during unzipping.
     """
-    log_disk_usage(f"Begin unzipping {len(zip_paths)} .zip files. This may take a while...")
+    log_disk_usage(f"Begin unzipping {len(zip_paths)} .zip files. "
+                   f"This may take a while...")
 
-    limit_gb = check_available_space(PROJ_LIM_OPTIONS["DATA"])   # get absolute limit
+    limit_gb = check_available_space(PROJ_LIM_OPTIONS["DATA"])   # abs limit
     limit_bytes = floor(limit_gb * (1024 ** 3))   # convert to bytes
 
     for zip_path in zip_paths:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             for file_info in zip_ref.infolist():
-                if get_disk_usage(cfg.DATA_PATH) + file_info.file_size >= limit_bytes:
-                    raise DiskSpaceExceeded(f"Unzipping will exceed the maximum allowed disk space "
-                                            f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder.")
+
+                f_size = file_info.file_size
+                if get_disk_usage(cfg.DATA_PATH) + f_size >= limit_bytes:
+                    raise DiskSpaceExceeded(
+                        f"Unzipping will exceed the max allowed disk space "
+                        f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder."
+                    )
             # unzip the file to its current directory
             logger.info(f"Unzipping '{zip_path}'")
             zip_ref.extractall(zip_path.parent)
@@ -180,7 +187,7 @@ def unzip(zip_paths: list):
         logger.info("Cleaning up zip file...")
         zip_path.unlink()
         log_disk_usage(f"Unzipped '{zip_path}'")
-    
+
     log_disk_usage("Unzipping complete")
 
 
@@ -193,7 +200,7 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
     Args:
         data_path: pathlib.Path to the data directory.
         test_size: int. Size of the test set in splitting of train test.
-    
+
     Raises:
         FileNotFoundError: If the necessary files don't exist after setup.
         DiskSpaceExceeded: If available disk space was exceeded during setup.
@@ -204,28 +211,35 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
 
     try:
         # monitor disk space usage in the background
-        monitor_thread = threading.Thread(target=monitor_disk_space, 
+        monitor_thread = threading.Thread(target=monitor_disk_space,
                                           args=(limit_gb,), daemon=True)
         monitor_thread.start()
 
-        setup_cmd = ["/bin/bash",
-                     str(Path(cfg.SUBMODULE_PATH, 'scripts', 'setup', 'setup.sh')),
-                     "-j", str(Path(data_path, 'annotations')),
-                     "-i", str(Path(data_path, 'images')),
-                     "--test-size", str(test_size),
-                     cfg.VERBOSITY]
+        setup_cmd = [
+            "/bin/bash",
+            str(Path(cfg.SUBMODULE_PATH, 'scripts', 'setup', 'setup.sh')),
+            "-j", str(Path(data_path, 'annotations')),
+            "-i", str(Path(data_path, 'images')),
+            "--test-size", str(test_size),
+            cfg.VERBOSITY
+        ]
         if save_for_view:
-            setup_cmd.insert(-1,"--save-for-view")
+            setup_cmd.insert(-1, "--save-for-view")
 
         run_bash_subprocess(setup_cmd)
 
     except DiskSpaceExceeded as e:
         logger.error(f"Disk space limit exceeded: {str(e)}")
-        raise DiskSpaceExceeded(f"Setting up exceeds the maximum allowed disk space "
-                                f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder.")
+        raise DiskSpaceExceeded(
+            f"Setting up exceeds the maximum allowed disk space "
+            f"of {limit_gb} GB for '{cfg.DATA_PATH}' folder."
+        )
 
     if not set(os.listdir(data_path)) >= {"masks", "train.txt", "test.txt"}:
-        raise FileNotFoundError(f"Data path '{data_path}' does not contain required entries after setup!")
+        raise FileNotFoundError(
+            f"Data path '{data_path}' does not contain required "
+            f"entries after setup!"
+        )
 
     log_disk_usage("Setup complete")
 
@@ -251,7 +265,7 @@ def run_bash_subprocess(cmd: list, timeout: int = 1000):
         process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
         return_code = process.wait(timeout=timeout)
 
-        # check the return code to terminate in case the bash script was forcefully exited
+        # check return code to stop if bash script was forcefully exited
         if return_code == 0:
             logger.info("Bash script executed successfully.")
         else:
@@ -260,16 +274,18 @@ def run_bash_subprocess(cmd: list, timeout: int = 1000):
                 f"Error during execution of bash script '{cmd[1]}'. "
                 f"Terminated with return code {return_code}.")
 
-    except subprocess.TimeoutExpired as e:
+    except subprocess.TimeoutExpired:
         logger.error(f"Timeout during execution of bash script '{cmd[1]}'.")
         process.terminate()
-        raise SubprocessError(f"Timeout during execution of bash script '{cmd[1]}'.")
+        raise SubprocessError(
+            f"Timeout during execution of bash script '{cmd[1]}'."
+        )
 
 
 def mlflow_logging(model_root: Path):
     """
     Logging model experiment to MLFlow server.
-    
+
     Args:
         model_root (Path) -- Path to model folder
     """
@@ -282,7 +298,7 @@ def mlflow_logging(model_root: Path):
     model_config_path = Path(model_root, "run_config.json")
     model_config = read_conf(model_config_path)
     model_params = {
-        **model_config['model'], 
+        **model_config['model'],
         'classes': model_config['data']['masks']['labels'],
         **model_config['data']['loader'],
         **model_config['train']
@@ -292,13 +308,16 @@ def mlflow_logging(model_root: Path):
     model = model_loader.model
 
     with open(Path(model_root, "eval.json"), "r") as f:
+        k1 = 'sklearn metrics - combined imagewise results'
+        k2 = 'sklearn metrics - combined imagewise classwise results'
+
         model_metrics = json.load(f)
-        model_metrics = {
-            **model_metrics['sklearn metrics - combined imagewise results'], 
-            **model_metrics['sklearn metrics - combined imagewise classwise results']
-        }
+        model_metrics = {**model_metrics[k1], **model_metrics[k2]}
         model_metrics_flat = nested_to_record(model_metrics, sep=' ')
-        model_metrics_flat = {k.replace('(', '- ').replace(')', ''): v for k, v in model_metrics_flat.items()}
+        model_metrics_flat = {
+            k.replace('(', '- ').replace(')', ''): v
+            for k, v in model_metrics_flat.items()
+        }
 
     with mlflow.start_run(run_name=Path(model_root).name):
         mlflow.tensorflow.log_model(model, artifact_path='artifacts')
@@ -329,8 +348,9 @@ def load_mlflow_model(model_root: Path):
     model = mlflow.pyfunc.load_model(model_uri)
     # -> This returns a ValueError
     # Unable to restore custom object of type _tf_keras_metric. Please make
-    # sure that any custom layers are included in the `custom_objects` arg when calling 
-    # `load_model()` and make sure that all layers implement `get_config` and `from_config`.
+    # sure that any custom layers are included in the `custom_objects` arg
+    # when calling `load_model()` and make sure that all layers implement
+    # `get_config` and `from_config`.
 
 
 # ###################################
@@ -340,14 +360,14 @@ def load_mlflow_model(model_root: Path):
 
 def monitor_disk_space(limit_gb):
     """
-    Thread function to monitor disk space and check the current usage doesn't exceed 
-    the available disk space limit.
+    Thread function to monitor disk space and check the current usage
+    doesn't exceed the available disk space limit.
 
     Arguments:
         limit_gb (int): identified available disk space (in GB)
 
     Raises:
-        DiskSpaceExceeded: If available disk space was exceeded during threading.
+        DiskSpaceExceeded: If available space was exceeded while threading.
     """
     limit_bytes = limit_gb * (1024 ** 3)  # convert to bytes
     try:
@@ -357,13 +377,14 @@ def monitor_disk_space(limit_gb):
             stored_bytes = get_disk_usage()
 
             if stored_bytes >= limit_bytes:
-                disk_space_exceeded_event.set()
                 raise DiskSpaceExceeded(
                     f"Exceeded maximum allowed disk space of {limit_gb} GB "
                     f"for '{cfg.BASE_PATH}' (or a subfolder)."
                 )
             else:
-                leftover_gb = round((limit_bytes - stored_bytes) / (1024 ** 3), 2)
+                leftover_gb = round(
+                    (limit_bytes - stored_bytes) / (1024 ** 3), 2
+                )
                 logger.info(f"Leftover disk space: {leftover_gb} GB")
 
     except DiskSpaceExceeded as e:
@@ -371,40 +392,52 @@ def monitor_disk_space(limit_gb):
         raise DiskSpaceExceeded
 
 
-def check_available_space(proj_lim_option: dict = PROJ_LIM_OPTIONS["BASE"]):
+def check_available_space(
+    proj_lim_option: dict = PROJ_LIM_OPTIONS["BASE"]
+):
     """
     Check overall data limit on node and redefine limit if necessary.
 
     Args:
         proj_lim_option (dict): {"LIMIT": int, "PATH": pathlib.Path}
-    
+
     Returns:
         available GB on node
     """
     project_limit_gb = proj_lim_option["LIMIT"]
-    # get used project space and theoretically remaining available space for project
-    project_used_gb = round(get_disk_usage(proj_lim_option["PATH"]) / (1024 ** 3), 2)
+    # get used project space and theoretically remaining available space
+    project_used_gb = round(
+        get_disk_usage(proj_lim_option["PATH"]) / (1024 ** 3), 2
+    )
     project_available_gb = round(project_limit_gb - project_used_gb, 2)
 
     try:
         # get available space on entire node
-        node_available_gb = float(subprocess.getoutput("df -h | grep 'overlay' | awk '{print $4}'").split("G")[0])
-    except ValueError as e:
-        logger.info(f"ValueError: Node disk space not readable. Using provided limit of {limit_gb} GB.")
+        cmd = "df -h | grep 'overlay' | awk '{print $4}'"
+        node_available_gb = float(subprocess.getoutput(cmd).split("G")[0])
+
+    except ValueError:
+        logger.info(
+            f"ValueError: Node disk space not readable. "
+            f"Using provided limit of {project_limit_gb} GB.")
         node_available_gb = project_limit_gb
-    
+
     # redefine available project space (with a safety margin)
     safety = 2
     if node_available_gb <= safety:
         raise DiskSpaceExceeded(
-            f"Available node disk space ({node_available_gb} GB) below safety margin."
+            f"Available node disk space ({node_available_gb} GB) "
+            f"below safety margin."
         )
 
     if node_available_gb - safety <= project_available_gb:
-        logger.warning(f"Available node disk space ({node_available_gb} GB) is less than the theoretically "
-                       f"remaining reserved project space ({project_available_gb} GB). Limit will be "
-                       f"reduced from {project_limit_gb} GB to {project_used_gb + node_available_gb} GB "
-                       f"minus a safety margin of {safety} GB.")
+        logger.warning(
+            f"Available node disk space ({node_available_gb} GB) is less "
+            f"than the theoretically remaining reserved project space "
+            f"({project_available_gb} GB). Limit will be reduced from "
+            f"{project_limit_gb} GB to {project_used_gb + node_available_gb}"
+            f"GB minus a safety margin of {safety} GB.")
+
         project_available_gb = node_available_gb - safety
 
     limit_gb = project_used_gb + project_available_gb
@@ -419,6 +452,9 @@ def get_disk_usage(folder: Path = cfg.BASE_PATH):
 
 
 def log_disk_usage(process_message: str):
-    """Log used disk space to the terminal with a process_message describing what has occurred.
+    """Log used disk space to the terminal with a process_message description.
     """
-    logger.info(f"{process_message}: Repository currently takes up {round(get_disk_usage() / (1024 ** 3), 2)} GB.")
+    logger.info(
+        f"{process_message}: Repository currently takes up "
+        f"{round(get_disk_usage() / (1024 ** 3), 2)} GB."
+    )

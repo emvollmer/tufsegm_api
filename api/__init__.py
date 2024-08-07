@@ -9,8 +9,6 @@ docs [1] and at a canonical exemplar module [2].
 import getpass
 import logging
 import os
-from pathlib import Path
-import numpy as np
 
 from aiohttp.web import HTTPException
 
@@ -32,7 +30,8 @@ def get_metadata():
         A dictionary containing metadata information required by DEEPaaS.
     """
     try:
-        logger.info("GET 'metadata' called. Collected data from: %s", config.API_NAME)
+        logger.info("GET 'metadata' called. Collected data from: %s",
+                    config.API_NAME)
         model_name = config.MODEL_TYPE + config.MODEL_SUFFIX
         metadata = {
             "author": config.API_METADATA.get("authors"),
@@ -40,10 +39,18 @@ def get_metadata():
             "description": config.API_METADATA.get("summary"),
             "license": config.API_METADATA.get("license"),
             "version": config.API_METADATA.get("version"),
-            "datasets_local": utils.get_local_dirs(entries={'images', 'annotations'}),
-            "datasets_remote": utils.get_remote_dirs(entries={'images', 'annotations'}),
-            "models_local": utils.get_local_dirs(config.MODELS_PATH, entries={model_name}),
-            "models_remote": utils.get_remote_dirs(entries={model_name}),
+            "datasets_local": utils.get_local_dirs(
+                entries={'images', 'annotations'}
+            ),
+            "datasets_remote": utils.get_remote_dirs(
+                entries={'images', 'annotations'}
+            ),
+            "models_local": utils.get_local_dirs(
+                config.MODELS_PATH, entries={model_name}
+            ),
+            "models_remote": utils.get_remote_dirs(
+                entries={model_name}
+            ),
         }
         logger.debug("Package model metadata: %s", metadata)
         return metadata
@@ -71,10 +78,12 @@ def predict(accept='application/json', **options):
             logger.info(f"POST 'predict' argument - {k}:\t{v}")
         result = aimodel.predict(**options)
         logger.info("POST 'predict' result: %s", result)
-        logger.debug("POST 'predict' returning content_type for: %s", accept)    # logger.info
+        logger.debug("POST 'predict' returning content_type for: %s",
+                     accept)
         return responses.content_types[accept](result, **options)
     except Exception as err:
-        logger.error("Error while running POST 'predict': %s", err, exc_info=True)
+        logger.error("Error while running POST 'predict': %s",
+                     err, exc_info=True)
         raise HTTPException(reason=err) from err
 
 
@@ -91,14 +100,15 @@ def train(**options):
     Returns:
         Parsed history/summary of the training process.
     """
-    # MLFlow experiment tracking requires setting environment variables 
+    # MLFlow experiment tracking requires setting environment variables
     # and getting/injecting necessary credentials
     if options['mlflow_username']:
         MLFLOW_TRACKING_USERNAME = options['mlflow_username']
         logger.info(
-            f"MLFlow model experiment tracking via account.\nUsername: {MLFLOW_TRACKING_USERNAME}"
+            f"MLFlow model experiment tracking via account."
+            f"\nUsername: {MLFLOW_TRACKING_USERNAME}"
         )
-        MLFLOW_TRACKING_PASSWORD =  getpass.getpass()  # inject password by typing manually
+        MLFLOW_TRACKING_PASSWORD = getpass.getpass()   # inject password
 
         os.environ['MLFLOW_TRACKING_USERNAME'] = MLFLOW_TRACKING_USERNAME
         os.environ['MLFLOW_TRACKING_PASSWORD'] = MLFLOW_TRACKING_PASSWORD
@@ -111,7 +121,8 @@ def train(**options):
         logger.info(f"POST 'train' result: {result}")
         return result
     except Exception as err:
-        logger.error("Error while running 'POST' train: %s", err, exc_info=True)
+        logger.error("Error while running 'POST' train: %s",
+                     err, exc_info=True)
         raise  # Reraise the exception after log
 
 
@@ -120,7 +131,6 @@ if __name__ == "__main__":
 
     # train_args = {
     #     'mlflow_username': None
-    #     # 'model_type': 'UNet',
     #     'backbone': 'resnet152',
     #     'encoded_weights': 'imagenet',
     #     'dataset_path': None,
@@ -138,14 +148,15 @@ if __name__ == "__main__":
     #     **train_args
     # )
 
-    pred_args = {
-        'model_dir': '/storage/tufsegm/models/2023-09-21_11-42-18',
-        'input_file': '/storage/tugsegm/additional_data/images_for_predict/MU_09/DJI_0_0001_R.npy',
-        'display': False,
-        #'save': True,
-        #'accept': 'application/json'
-    }
-    predict(
-        accept='application/json',
-        **pred_args
-    )
+    # pred_args = {
+    #     'model_dir': '/storage/tufsegm/models/2023-09-21_11-42-18',
+    #     'input_file': '/storage/tugsegm/remote_data/images/'
+    #                   'MU_09/DJI_0_0001_R.npy',
+    #     'display': False,
+    #     'save': True,
+    #     'accept': 'application/json'
+    # }
+    # predict(
+    #     accept='application/json',
+    #     **pred_args
+    # )

@@ -5,7 +5,6 @@ prediction and training methods.
 import marshmallow
 from pathlib import Path
 from webargs import ValidationError, fields, validate
-import os
 
 from tufsegm_api.api import config, responses, utils
 
@@ -41,9 +40,13 @@ class NpyFile(fields.String):
         if Path(value).is_file():
             if value.endswith(".npy"):
                 return value
-            raise ValidationError(f"Provided file path `{value}` is not a numpy file.")
+            raise ValidationError(
+                f"Provided file path `{value}` is not a numpy file."
+            )
         else:
-            raise ValidationError(f"Provided file path `{value}` does not exist.")
+            raise ValidationError(
+                f"Provided file path `{value}` does not exist."
+            )
 
 
 class PredArgsSchema(marshmallow.Schema):
@@ -54,21 +57,29 @@ class PredArgsSchema(marshmallow.Schema):
 
     model_dir = fields.String(
         metadata={
-            "description": "Model to be used for prediction. If a remote folder (/storage/)"
-                           "is selected, prediction results will be saved there."
+            "description": "Model to be used for prediction. "
+                           "If a remote folder (/storage/) is selected,"
+                           "prediction results will be saved there."
         },
         validate=validate.OneOf(
-            utils.get_local_dirs(config.MODELS_PATH, entries={config.MODEL_TYPE + config.MODEL_SUFFIX}) + 
-            utils.get_remote_dirs(entries={config.MODEL_TYPE + config.MODEL_SUFFIX})
+            utils.get_local_dirs(
+                config.MODELS_PATH,
+                entries={config.MODEL_TYPE + config.MODEL_SUFFIX}
+            ) +
+            utils.get_remote_dirs(
+                entries={config.MODEL_TYPE + config.MODEL_SUFFIX})
         ),
         required=True,
     )
 
     input_file = NpyFile(
         metadata={
-            "description": f"Insert a .npy path of a four channels file to infer on. Provide this in either one of two ways:"
-                           f"\n- local path (in 'data/')\tf.e.: 'images/KA_01/DJI_0_0001_R.npy'"
-                           f"\n- remote path on Nextcloud\tf.e.: '/storage/tufsegm/.../KA_01/DJI_0_0001_R.npy'",
+            "description": "Insert a .npy path of a four channels file to "
+                           "infer on. Provide this in either one of two ways:"
+                           "\n- local path (in 'data/')"
+                           "\tf.e.: 'images/KA_01/DJI_0_0001_R.npy'"
+                           "\n- remote path on Nextcloud"
+                           "\tf.e.: '/storage/.../KA_01/DJI_0_0001_R.npy'",
         },
         required=True,
     )
@@ -123,7 +134,8 @@ class TrainArgsSchema(marshmallow.Schema):
 
     weights = fields.String(
         metadata={
-            "description": "Encoder weights to load (pretrained or not). Default is 'imagenet'.",
+            "description": "Encoder weights to load (pretrained or not). "
+                           "Default is 'imagenet'.",
         },
         validate=validate.OneOf(['imagenet', 'None']),
         load_default="imagenet",
@@ -132,11 +144,12 @@ class TrainArgsSchema(marshmallow.Schema):
     dataset_path = fields.String(
         metadata={
             "description": "Path to the dataset. If none is provided, "
-                           "the dataset in the 'data' folder will be used or else "
-                           "downloaded from Nextcloud if local 'data' is empty.",
+                           "the dataset in the 'data' folder will be used "
+                           "or else downloaded from Nextcloud if local "
+                           "'data' is empty.",
         },
         validate=validate.OneOf(
-            utils.get_local_dirs(entries={'images', 'annotations'}) + 
+            utils.get_local_dirs(entries={'images', 'annotations'}) +
             utils.get_remote_dirs(entries={'images', 'annotations'})
         ),
         required=False,
@@ -162,8 +175,8 @@ class TrainArgsSchema(marshmallow.Schema):
 
     channels = fields.Integer(
         metadata={
-            "description": "Process the data either in standard 4 channels (RGBT) "
-                           "or as 3 channels (greyRGB+T+T).",
+            "description": "Process the data either in standard 4 channels "
+                           "(RGBT) or as 3 channels (greyRGB+T+T).",
         },
         validate=validate.OneOf([3, 4]),
         load_default=4,
@@ -171,8 +184,9 @@ class TrainArgsSchema(marshmallow.Schema):
 
     processing = fields.String(
         metadata={
-            "description": "Use original data (basic) or apply preprocessing filters "
-                           "(vignetting removal, retinex and unsharp).",
+            "description": "Use original data (basic) or apply "
+                           "preprocessing filters (vignetting removal, "
+                           "retinex and unsharp).",
         },
         validate=validate.OneOf(["basic", "vignetting", "retinex_unsharp"]),
         load_default="basic",
@@ -181,8 +195,8 @@ class TrainArgsSchema(marshmallow.Schema):
     img_size = fields.String(
         metadata={
             "description": "Use original image size (640x512) or downscale. "
-                           "ATTENTION: The original size requires a lot of RAM memory "
-                           "(> 25000) otherwise training will fail."
+                           "ATTENTION: The original size requires a lot of "
+                           "RAM memory (> 25000) otherwise training will fail."
         },
         validate=validate.OneOf(["640x512", "320x256", "160x128"]),
         load_default="320x256",
@@ -192,13 +206,13 @@ class TrainArgsSchema(marshmallow.Schema):
         metadata={
             "description": "Number of epochs to train the model.",
         },
-        validate=validate.Range(min=1), # minimum value has to be 1
+        validate=validate.Range(min=1),  # minimum value has to be 1
         load_default=1,
     )
 
     batch_size = fields.Integer(
         metadata={'description': 'Batch size to load the data.'},
-        validate=validate.Range(min=1), # minimum value has to be 1
+        validate=validate.Range(min=1),  # minimum value has to be 1
         load_default=8,
     )
 
@@ -209,6 +223,6 @@ class TrainArgsSchema(marshmallow.Schema):
 
     seed = fields.Integer(
         metadata={'description': 'Global seed number for training.'},
-        validate=validate.Range(min=1), # minimum value has to be 1
+        validate=validate.Range(min=1),  # minimum value has to be 1
         load_default=1000,
     )

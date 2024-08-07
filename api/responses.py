@@ -1,6 +1,6 @@
 """Module for defining custom API response parsers and content types.
 This module is used by the API server to convert the output of the requested
-method into the desired format. 
+method into the desired format.
 
 The module shows simple but efficient example functions. However, you may
 need to modify them for your needs.
@@ -24,7 +24,6 @@ def json_response(result, **options):
 
     Arguments:
         result -- Result value from call, expected either dict or str
-          (see https://docs.deep-hybrid-datacloud.eu/projects/deepaas/en/stable/user/v2-api.html).
         options -- Not used, added for illustration purpose.
 
     Raises:
@@ -54,7 +53,6 @@ def pdf_response(result, **options):
 
     Arguments:
         result -- Result value from call, expected either dict or str
-          (see https://docs.deep-hybrid-datacloud.eu/projects/deepaas/en/stable/user/v2-api.html).
         options -- Not used, added for illustration purpose.
 
     Raises:

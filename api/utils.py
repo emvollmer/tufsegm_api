@@ -3,11 +3,8 @@ This module is used to define API utilities and helper functions.
 """
 import logging
 import os
-from pathlib import Path
-import subprocess
+# from pathlib import Path
 import sys
-from subprocess import TimeoutExpired
-from typing import Union
 
 from tufsegm_api.api import config
 
@@ -26,10 +23,12 @@ def get_remote_dirs(remote_dir=config.REMOTE_PATH, entries: set = {}):
 
 
 def get_dirs(root_dir: str, entries: set = {}):
-    """Utility to return a list of directories containing 
+    """Utility to return a list of directories containing
     specific folder / file entries.
-        - get_dirs(root_dir=config.DATA_PATH, entries={'images', 'annotations'})
-        - get_dirs(root_dir=config.REMOTE_PATH, entries={'UNet.hdf5'})
+        - get_dirs(root_dir=config.DATA_PATH,
+                   entries={'images', 'annotations'})
+        - get_dirs(root_dir=config.REMOTE_PATH,
+                   entries={'UNet.hdf5'})
 
     Arguments:
         root_dir (str): directory path to scan
