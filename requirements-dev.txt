@@ -1,6 +1,6 @@
 # DEEPaaS framework requirements
 jupyterlab
-tox
+tox==3.28.0
 black
 isort
 Sphinx
