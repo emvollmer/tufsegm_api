@@ -6,7 +6,7 @@ import marshmallow
 from pathlib import Path
 from webargs import ValidationError, fields, validate
 
-from tufsegm_api.api import config, responses, utils
+from . import config, responses, utils
 
 
 class ModelName(fields.String):
