@@ -19,8 +19,8 @@ import threading
 import zipfile
 
 import tufsegm_api.config as cfg
-from TUFSeg.scripts.segm_models._utils import ModelLoader
-from TUFSeg.scripts.configuration import read_conf
+from tufseg.segm_models._utils import ModelLoader
+from tufseg.configuration import read_conf
 
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.LOG_LEVEL)
