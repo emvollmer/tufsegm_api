@@ -14,7 +14,7 @@ from aiohttp.web import HTTPException
 
 import tufsegm_api as aimodel
 
-from tufsegm_api.api import config, responses, schemas, utils
+from . import config, responses, schemas, utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(config.LOG_LEVEL)

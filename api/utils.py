@@ -6,7 +6,7 @@ import os
 # from pathlib import Path
 import sys
 
-from tufsegm_api.api import config
+from . import config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(config.LOG_LEVEL)

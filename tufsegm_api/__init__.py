@@ -14,7 +14,7 @@ import tufsegm_api.config as cfg
 
 from tufsegm_api import utils
 
-from TUFSeg.scripts.segm_models.infer_UNet import main as predict_func
+from tufseg.scripts.segm_models.infer_UNet import main as predict_func
 
 logger = logging.getLogger(__name__)
 utils.configure_api_logging(logger, cfg.LOG_LEVEL)
