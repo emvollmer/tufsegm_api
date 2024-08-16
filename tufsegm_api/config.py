@@ -7,23 +7,6 @@ import logging
 import os
 import os.path as osp
 from pathlib import Path
-import sys
-
-# Training with Tensorflow requires XLA_FLAGS to be set in the training
-# Python script, which in turn requires the CUDA_HOME environment variable
-# to be defined. The following code helps prevent a "KeyError: 'CUDA_HOME'"
-CUDA_PATH = "/usr/local/cuda/"
-if os.path.exists(CUDA_PATH):
-    if "CUDA_HOME" not in os.environ:
-        os.environ["CUDA_HOME"] = CUDA_PATH
-        print(f"CUDA_HOME '{CUDA_PATH}' not an environment variable. "
-              f"Adding to prevent KeyError in tf training...")
-    else:
-        print(f"CUDA_HOME already defined as {os.environ['CUDA_HOME']}")
-else:
-    print(f"CUDA does not exist at {CUDA_PATH}! "
-          f"Please check and define path manually...")
-    sys.exit(1)
 
 BASE_PATH = Path(__file__).resolve(strict=True).parents[1]
 
@@ -48,7 +31,7 @@ REMOTE_MODELS_PATH = Path(REMOTE_MODELS_PATH)
 
 # Define submodule name and path
 SUBMODULE_NAME = 'TUFSeg'
-SUBMODULE_PATH = Path(BASE_PATH, SUBMODULE_NAME)
+SUBMODULE_PATH = Path(BASE_PATH, SUBMODULE_NAME, 'tufseg')
 
 # configure logging:
 # logging level across various modules can be setup via USER_LOG_LEVEL,

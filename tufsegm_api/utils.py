@@ -215,9 +215,13 @@ def setup(data_path: Path, test_size: int, save_for_view: bool = False):
                                           args=(limit_gb,), daemon=True)
         monitor_thread.start()
 
+        setup_path = Path(cfg.SUBMODULE_PATH, 'scripts', 'setup', 'setup.sh')
+        if not setup_path.is_file():
+            raise FileNotFoundError(f"File '{setup_path}' does not exist!")
+
         setup_cmd = [
             "/bin/bash",
-            str(Path(cfg.SUBMODULE_PATH, 'scripts', 'setup', 'setup.sh')),
+            str(setup_path),
             "-j", str(Path(data_path, 'annotations')),
             "-i", str(Path(data_path, 'images')),
             "--test-size", str(test_size),
@@ -327,30 +331,6 @@ def mlflow_logging(model_root: Path):
         logger.info("MLFlow - logged evaluation metrics.")
 
     return
-
-
-# todo: correct errors in mlflow logging so that model can be loaded
-def load_mlflow_model(model_root: Path):
-    """CURRENTLY NOT YET POSSIBLE, MODEL CAN'T BE LOADED FROM MLFLOW..."""
-    exp = mlflow.get_experiment_by_name(cfg.MLFLOW_EXPERIMENT_NAME)
-
-    latest_run = mlflow.search_runs(
-        experiment_ids=exp.experiment_id,
-        order_by=["start_time DESC"],
-        max_results=1
-    )
-    latest_run_id = latest_run.run_id[0]
-    run_info = mlflow.get_run(latest_run_id)
-    model_uri = f'runs:/{latest_run_id}/artifacts'
-
-    model_info = mlflow.models.get_model_info(model_uri)
-
-    model = mlflow.pyfunc.load_model(model_uri)
-    # -> This returns a ValueError
-    # Unable to restore custom object of type _tf_keras_metric. Please make
-    # sure that any custom layers are included in the `custom_objects` arg
-    # when calling `load_model()` and make sure that all layers implement
-    # `get_config` and `from_config`.
 
 
 # ###################################

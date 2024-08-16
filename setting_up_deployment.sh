@@ -48,7 +48,23 @@ echo "Installing libgl1..."
 apt-get install -y libgl1
 echo "-----------------------"
 
+# ########## Set required environment variables
+# Training with Tensorflow requires XLA_FLAGS to be set, which
+# in turn requires CUDA_HOME to be set as an environment variable.
+# Define relevant path as CUDA_HOME here to prevent KeyError.
+echo "Setting CUDA_HOME environment variable..."
+cuda_path="/usr/local/cuda/"
+if [ -d "$cuda_path" ]; then
+    export CUDA_HOME="$cuda_path"
+    echo "CUDA_HOME is set to $CUDA_HOME"
+else
+    echo "Path $cuda_path does not exist! CUDA_HOME cannot be set."
+    exit 1
+fi
+echo "-----------------------"
+
 # ########## Setup up API and submodule repositories
+echo "Setting up TUFSeg API and submodule repositories..."
 # upgrade pip
 pip install --upgrade pip
 
@@ -63,12 +79,6 @@ pip install packaging==22.0
 # install repos
 pip install -e ./TUFSeg/
 pip install -e .
-
-# ########## Adding API and submodule to PYTHONPATH to avoid ModuleNotFoundError
-# This HAS to be done here - additions in f.e. the API config are only temporary
-BASE_DIR=$(pwd)
-export PYTHONPATH="${PYTHONPATH}:$BASE_DIR"
-export PYTHONPATH="${PYTHONPATH}:$BASE_DIR/TUFSeg"
 
 echo "================================================================"
 echo "DEPLOYMENT SETUP COMPLETE"

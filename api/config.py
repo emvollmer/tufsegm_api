@@ -9,10 +9,11 @@ import logging
 from importlib import metadata
 
 # Necessary imports for api.__init__ code
-from tufsegm_api.config import (
-    DATA_PATH, REMOTE_PATH,
-    MODELS_PATH, MODEL_TYPE, MODEL_SUFFIX
-)
+from tufsegm_api.config import DATA_PATH  # noqa: F401
+from tufsegm_api.config import REMOTE_PATH  # noqa: F401
+from tufsegm_api.config import MODELS_PATH  # noqa: F401
+from tufsegm_api.config import MODEL_TYPE  # noqa: F401
+from tufsegm_api.config import MODEL_SUFFIX  # noqa: F401
 
 # API name
 API_NAME = os.getenv("API_NAME", default="tufsegm_api")

@@ -135,6 +135,11 @@ def train(**kwargs):
 
     script_path = Path(cfg.SUBMODULE_PATH,
                        'scripts', 'segm_models', 'train.sh')
+    if not script_path.is_file():
+        raise FileNotFoundError(
+            f"File '{script_path}' does not exist!"
+        )
+
     train_cmd = [
         "/bin/bash", str(script_path),
         "-src", str(data_path),
